@@ -1,0 +1,17 @@
+[
+   {
+      "directory" : "C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/CPU1_RAM",
+      "command"   : "clang++ -I\"C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader\" -I\"C:/ti/C2000Ware_6_00_01_00/\" -I\"C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/device\" -I\"C:/ti/C2000Ware_6_00_01_00/driverlib/f28003x/driverlib/\" -I\"C:/ti/ccs2041/ccs/tools/compiler/ti-cgt-c2000_22.6.3.LTS/include\" -DDEBUG -DRAM -I\"C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/CPU1_RAM/syscfg\" -xc",
+      "file"      : "C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/device/device.c"
+   },
+   {
+      "directory" : "C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/CPU1_RAM",
+      "command"   : "clang++ -I\"C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader\" -I\"C:/ti/C2000Ware_6_00_01_00/\" -I\"C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/device\" -I\"C:/ti/C2000Ware_6_00_01_00/driverlib/f28003x/driverlib/\" -I\"C:/ti/ccs2041/ccs/tools/compiler/ti-cgt-c2000_22.6.3.LTS/include\" -DDEBUG -DRAM -I\"C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/CPU1_RAM/syscfg\"",
+      "file"      : "C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/device/f28003x_codestartbranch.asm"
+   },
+   {
+      "directory" : "C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/CPU1_RAM",
+      "command"   : "clang++ -I\"C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader\" -I\"C:/ti/C2000Ware_6_00_01_00/\" -I\"C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/device\" -I\"C:/ti/C2000Ware_6_00_01_00/driverlib/f28003x/driverlib/\" -I\"C:/ti/ccs2041/ccs/tools/compiler/ti-cgt-c2000_22.6.3.LTS/include\" -DDEBUG -DRAM -I\"C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/CPU1_RAM/syscfg\" -xc",
+      "file"      : "C:/Users/syafi/OneDrive/Documents/repos/Projects/Bootloader/empty_driverlib_main.c"
+   }
+]
