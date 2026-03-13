@@ -9,4 +9,6 @@
 	<templateProperties value="id=empty_driverlib_project.projectspec.Bootloader"/>
 	<origin value="C:\ti\C2000Ware_6_00_01_00\driverlib\f28003x\examples\empty_projects\CCS\empty_driverlib_project.projectspec"/>
 	<filesToOpen value=""/>
+	<activeTargetConfiguration value="targetConfigs/TMS320F280039C_LaunchPad.ccxml"/>
+	<isTargetConfigurationManual value="true"/>
 </projectOptions>

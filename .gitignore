@@ -1,0 +1,12 @@
+# ignore all .obj files
+*.obj
+LintOut.txt
+
+# ignore all files in CPU1_FLASH and CPU1_RAM folders
+CPU1_FLASH/
+CPU1_FLASH_DEBUG/
+CPU1_FLASH_RELEASE/
+CPU1_RAM/
+
+# ignore .theia directory
+.theia/*
