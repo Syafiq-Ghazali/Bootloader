@@ -179,7 +179,11 @@
                                     <listOptionValue value="${PROJECT_ROOT}/BSW"/>
                                     <listOptionValue value="${PROJECT_ROOT}/BSW/BFLASH"/>
                                     <listOptionValue value="${PROJECT_ROOT}/ASW"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/BSW/BCRC"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/ASW/BSM"/>
                                     <listOptionValue value="${PROJECT_ROOT}/ASW/MAIN"/>
+                                    <listOptionValue value="C:\ti\c2000\C2000Ware_6_00_00_00\libraries\flash_api\f28003x"/>
+                                    <listOptionValue value="C:\ti\c2000\C2000Ware_6_00_00_00\libraries\flash_api\f28003x\include\FlashAPI"/>
                                 </option>
                                 <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.ABI.877791406" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.ABI" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.ABI.eabi" valueType="enumerated"/>
                                 <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.DEFINE.1638394959" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.DEFINE" valueType="definedSymbols">
@@ -234,7 +238,7 @@
                         </toolChain>
                     </folderInfo>
                     <sourceEntries>
-                        <entry excluding="device/driverlib|28003x_generic_ram_lnk.cmd|targetConfigs/TMS320F280039C_LaunchPad.ccxml" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        <entry excluding="device/driverlib|targetConfigs/TMS320F280039C_LaunchPad.ccxml" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
                     </sourceEntries>
                 </configuration>
             </storageModule>
@@ -477,7 +481,7 @@
                         </toolChain>
                     </folderInfo>
                     <sourceEntries>
-                        <entry excluding="device/driverlib|28003x_generic_ram_lnk.cmd|targetConfigs/TMS320F280039C.ccxml" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+                        <entry excluding="device/driverlib|targetConfigs/TMS320F280039C.ccxml" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
                     </sourceEntries>
                 </configuration>
             </storageModule>
