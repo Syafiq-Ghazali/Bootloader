@@ -17,6 +17,7 @@ void main(void)
     //
     Device_initGPIO();
 
+
     //
     // Initialize PIE and clear PIE registers. Disables CPU interrupts.
     //

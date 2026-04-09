@@ -7,6 +7,9 @@
 
 __attribute__((ramfunc)) void BFLASH_init(void)
 {
+
+    EALLOW;
+
     Fapi_StatusType status;
 
     // Initialize the flash peripheral module
@@ -47,6 +50,9 @@ __attribute__((ramfunc)) void BFLASH_init(void)
     // Force a pipeline flush to ensure that the write to the last register
     // configured occurs before returning.
     FLASH_DELAY_CONFIG;
+
+
+
 }
 
 void BFLASH_clear(void)
