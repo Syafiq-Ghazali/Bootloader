@@ -173,7 +173,7 @@
 #define SYSCTL_O_PMBUS_A_AC       0x130U   // PMBUSA Master Access Control Register
 #define SYSCTL_O_LIN_A_AC         0x138U   // LINA Master Access Control Register
 #define SYSCTL_O_LIN_B_AC         0x13AU   // LINB Master Access Control Register
-#define SYSCTL_O_DCANA_AC         0x140U   // DCANA Master Access Control Register
+#define SYSCTL_O_BCANA_AC         0x140U   // BCANA Master Access Control Register
 #define SYSCTL_O_MCANA_AC         0x148U   // MCANA Master Access Control Register
 #define SYSCTL_O_FSIATX_AC        0x158U   // FSIA Master Access Control Register
 #define SYSCTL_O_FSIARX_AC        0x15AU   // FSIB Master Access Control Register
@@ -1570,15 +1570,15 @@
 
 //*************************************************************************************************
 //
-// The following are defines for the bit fields in the DCANA_AC register
+// The following are defines for the bit fields in the BCANA_AC register
 //
 //*************************************************************************************************
-#define SYSCTL_DCANA_AC_CPU1_ACC_S   0U
-#define SYSCTL_DCANA_AC_CPU1_ACC_M   0x3U    // CPU1 Access conditions to peripheral
-#define SYSCTL_DCANA_AC_DMA1_ACC_S   4U
-#define SYSCTL_DCANA_AC_DMA1_ACC_M   0x30U   // DMA1 Access Conditions to Peripheral
-#define SYSCTL_DCANA_AC_HICA_ACC_S   6U
-#define SYSCTL_DCANA_AC_HICA_ACC_M   0xC0U   // HICA Access Contions to Peripheral
+#define SYSCTL_BCANA_AC_CPU1_ACC_S   0U
+#define SYSCTL_BCANA_AC_CPU1_ACC_M   0x3U    // CPU1 Access conditions to peripheral
+#define SYSCTL_BCANA_AC_DMA1_ACC_S   4U
+#define SYSCTL_BCANA_AC_DMA1_ACC_M   0x30U   // DMA1 Access Conditions to Peripheral
+#define SYSCTL_BCANA_AC_HICA_ACC_S   6U
+#define SYSCTL_BCANA_AC_HICA_ACC_M   0xC0U   // HICA Access Contions to Peripheral
 
 //*************************************************************************************************
 //

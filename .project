@@ -19,6 +19,10 @@
 	</natures>
 	<variableList>
 		<variable>
+			<name>C2000WARE_DCL_ROOT</name>
+			<value>$%7BCOM_TI_C2000WARE_INSTALL_DIR%7D/libraries/control/DCL</value>
+		</variable>
+		<variable>
 			<name>C2000WARE_DLIB_ROOT</name>
 			<value>file:/C:/ti/c2000/C2000Ware_6_00_00_00/driverlib/f28003x/driverlib</value>
 		</variable>
@@ -33,6 +37,14 @@
 		<variable>
 			<name>CLB_SYSCFG_ROOT</name>
 			<value>file:/C:/ti/c2000/C2000Ware_6_00_00_00/utilities/clb_tool/clb_syscfg</value>
+		</variable>
+		<variable>
+			<name>FlashAPI_INCLUDE_ROOT</name>
+			<value>$%7BCOM_TI_C2000WARE_INSTALL_DIR%7D/libraries/flash_api/f28003x/include/FlashAPI</value>
+		</variable>
+		<variable>
+			<name>FlashAPI_LIB_ROOT</name>
+			<value>$%7BCOM_TI_C2000WARE_INSTALL_DIR%7D/libraries/flash_api/f28003x/lib</value>
 		</variable>
 		<variable>
 			<name>SYSTEMC_INSTALL</name>

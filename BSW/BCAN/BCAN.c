@@ -1,7 +1,7 @@
 /*
 |===============================================================================
 |
-| File:         DCAN.c
+| File:         BCAN.c
 |
 | Project:      Agnostic 
 |
@@ -26,10 +26,11 @@
 
 /*=== INCLUDE FILES ==========================================================*/
 
-#include "DCAN.h"
-#include "DMCU.h"
+#include "BCAN.h"
 
 /*=== #DEFINES ===============================================================*/
+
+#define DEVICE_SYSCLK_FREQ (((uint32_t)((20000000U * 48) / (2 * 4 * 1))))
 
 /*=== TYPE DEFINITIONS =======================================================*/
 
@@ -41,21 +42,22 @@
 
 static void     F_interruptCallback     (CanHandle_t *handle);
 static void     F_canMsgDbInitialize    (CanHandle_t *handle);
-static Bool_t   F_canRxMsgSave          (CanHandle_t *handle, Uint32_t id,
+static bool     F_canRxMsgSave          (CanHandle_t *handle, uint32_t id,
                                          CanMsg_t *canMsg);
+static void     F_initCanGPIO           (void);
 
 /*=== GLOBAL DATA ============================================================*/
 
 /*=== PRIVATE DATA ===========================================================*/
 
 static           CanMsg_t    F_rxQueueBuffer[CAN_MAX_RX_QUEUE_SIZE];
-volatile static  Bool_t      F_txMsgBusyFlags[CAN_TX_MSG_OBJ_SIZE] = {FALSE};
-volatile static  Uint16_t    F_txCanHwBuf = CAN_TX_MSG_OBJ_SIZE;
+volatile static  bool      F_txMsgBusyFlags[CAN_TX_MSG_OBJ_SIZE] = {FALSE};
+volatile static  uint16_t    F_txCanHwBuf = CAN_TX_MSG_OBJ_SIZE;
 
 /*
 |===============================================================================
 |
-| Function:         DCAN_init
+| Function:         BCAN_init
 |
 | Description:      Initialize an CAN instance
 |
@@ -73,14 +75,13 @@ volatile static  Uint16_t    F_txCanHwBuf = CAN_TX_MSG_OBJ_SIZE;
 | handle       I/O     CAN instance handle
 |=============================================================================*/
 
-void DCAN_init 
+void BCAN_init 
 (
     CanHandle_t *handle
 )
 {
     /* Initialize CAN GPIO pins */
-    DGPIO_init(handle->txGpioConfig);
-    DGPIO_init(handle->rxGpioConfig);
+    F_initCanGPIO();
     
     /* Initialize the CAN controller */
     CAN_initModule(handle->base);
@@ -104,6 +105,20 @@ void DCAN_init
 
     CAN_startModule(handle->base);
     CanMsgQueue_init(&handle->rxQueue, F_rxQueueBuffer, CAN_MAX_RX_QUEUE_SIZE);
+}
+
+static void F_initCanGPIO(void)
+{
+    GPIO_setPinConfig(GPIO_4_CANA_TX);
+    GPIO_setPadConfig(4u, GPIO_PIN_TYPE_STD);
+    GPIO_setQualificationMode(4u, GPIO_QUAL_SYNC);
+    GPIO_setDirectionMode(4u, GPIO_DIR_MODE_OUT);
+
+    GPIO_setPinConfig(GPIO_5_CANA_RX);
+    GPIO_setPadConfig(5u, GPIO_PIN_TYPE_STD);
+    GPIO_setQualificationMode(5u, GPIO_QUAL_SYNC);
+    GPIO_setDirectionMode(5u, GPIO_DIR_MODE_OUT);
+
 }
 
 /*
@@ -133,7 +148,7 @@ static void F_canMsgDbInitialize
 )
 {
     /* Organized the Tx messages from 1-16 and Rx from 17 to 32 */
-    Uint32_t i;
+    uint32_t i;
     for (i = CAN_TX_MSG_OBJ_ID_START; i <= CAN_TX_MSG_OBJ_ID_END; i++)
     {
         CAN_setupMessageObject(handle->base, i, CAN_ID_TX_DUMMY, handle->frameType,
@@ -160,7 +175,7 @@ static void F_canMsgDbInitialize
 /*
 |===============================================================================
 |
-| Function:         DCAN_tx
+| Function:         BCAN_tx
 |
 | Description:      Send a single Can message
 |
@@ -181,13 +196,13 @@ static void F_canMsgDbInitialize
 | canMsg       I/O     CAN instance CanMsg
 |=============================================================================*/
 
-CanStatus_t DCAN_tx
+CanStatus_t BCAN_tx
 (
     CanHandle_t *handle,
     CanMsg_t *canMsg
 )
 {
-    Uint16_t i = CAN_TX_MSG_OBJ_ID_START;
+    uint16_t i = CAN_TX_MSG_OBJ_ID_START;
 
     if (canMsg == NULL)
     {
@@ -217,7 +232,7 @@ CanStatus_t DCAN_tx
 /*
 |===============================================================================
 |
-| Function:     DCAN_rx
+| Function:     BCAN_rx
 |
 | Description:  Pollng functon to check if a message is available 
 |
@@ -237,7 +252,7 @@ CanStatus_t DCAN_tx
 | canMsg       I/O     CAN instance CanMsg
 |===============================================================================*/
 
-CanStatus_t DCAN_rx
+__attribute__((ramfunc)) CanStatus_t BCAN_rx
 (
     CanHandle_t *handle,
     CanMsg_t *canMsg
@@ -276,16 +291,16 @@ CanStatus_t DCAN_rx
 | canMsg       I       CAN instance CanMsg
 |=============================================================================*/
 
-static Bool_t F_canRxMsgSave
+static bool F_canRxMsgSave
 (
     CanHandle_t *handle,
-    Uint32_t id,
+    uint32_t id,
     CanMsg_t *canMsg
 )
 {   
-    Uint16_t i;
-    Uint32_t msgID; 
-    Uint16_t msgData[CAN_DEFAULT_LEN];
+    uint16_t i;
+    uint32_t msgID; 
+    uint16_t msgData[CAN_DEFAULT_LEN];
     CAN_MsgFrameType frameType;
 
     /* Saves the proper CAN message parameters back to the can message struct */

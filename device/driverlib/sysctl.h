@@ -567,7 +567,7 @@ typedef enum
     SYSCTL_ACCESS_PMBUSA       = 0x130, //!< PMBUS_A access
     SYSCTL_ACCESS_LINA         = 0x138, //!< LIN_A access
     SYSCTL_ACCESS_LINB         = 0x13A, //!< LIN_B access
-    SYSCTL_ACCESS_CANA         = 0x140, //!< DCANA access
+    SYSCTL_ACCESS_CANA         = 0x140, //!< BCANA access
     SYSCTL_ACCESS_MCANA         = 0x148, //!< MCANA access
     SYSCTL_ACCESS_FSIATX        = 0x158, //!< FSIATX access
     SYSCTL_ACCESS_FSIARX        = 0x15A, //!< FSIARX access

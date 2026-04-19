@@ -1577,7 +1577,7 @@ CAN_initModule(uint32_t base);
 //!
 //! \note Not all bit-rate and bit-time combinations are valid.
 //!       For combinations that would yield the correct bit-rate,
-//!       refer to the DCAN_CANBTR_values.xlsx file in the "docs" directory.
+//!       refer to the BCAN_CANBTR_values.xlsx file in the "docs" directory.
 //!       The CANBTR register values calculated by the function CAN_setBitRate
 //!       may not be suitable for your network parameters. If this is the case
 //!       and you have computed the correct values for your network, you could

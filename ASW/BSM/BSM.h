@@ -27,12 +27,13 @@ typedef enum
 
 /* Structs */
 
+
 typedef struct SmHandle_t
 {
     void *self;
-    SmState_t currState;
-    SmState_t prevState;
-    SmState_t nextState;
+    BlState_t currState;
+    BlState_t prevState;
+    BlState_t nextState;
 } SmHandle_t;
 
 typedef struct BlImageMetadata_t
@@ -54,4 +55,7 @@ typedef struct
     uint16_t activeSlot;
 } BlMetadataTable_t;    
 
+
+
+extern void BSM_fsm(SmHandle_t *handle);
 #endif

@@ -36,10 +36,10 @@
 typedef struct                                                              \
 {                                                                           \
     TYPE*      buf;                                                         \
-    Uint16_t   count;                                                       \
-    Uint16_t   head;                                                        \
-    Uint16_t   tail;                                                        \
-    Uint16_t   len;                                                         \
+    uint16_t   count;                                                       \
+    uint16_t   head;                                                        \
+    uint16_t   tail;                                                        \
+    uint16_t   len;                                                         \
     uint32_t   overflowCtr;                                                 \
 } NAME##Queue_t;                                                            \
                                                                             \
@@ -47,7 +47,7 @@ static inline void NAME##Queue_init                                         \
 (                                                                           \
         NAME##Queue_t*  q,                                                  \
         TYPE*           buffer,                                             \
-        Uint16_t        length                                              \
+        uint16_t        length                                              \
 )                                                                           \
 {                                                                           \
     q->buf = buffer;                                                        \
@@ -86,7 +86,7 @@ static inline void NAME##Queue_pop                                          \
     q->count--;                                                             \
 }                                                                           \
                                                                             \
-static inline Bool_t NAME##Queue_isFull                                     \
+static inline bool NAME##Queue_isFull                                     \
 (                                                                           \
     const NAME##Queue_t* q                                                  \
 )                                                                           \
@@ -94,7 +94,7 @@ static inline Bool_t NAME##Queue_isFull                                     \
     return (q->count >= q->len);                                            \
 }                                                                           \
                                                                             \
-static inline Bool_t NAME##Queue_isEmpty                                    \
+static inline bool NAME##Queue_isEmpty                                    \
 (                                                                           \
     const NAME##Queue_t* q                                                  \
 )                                                                           \
