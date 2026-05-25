@@ -20,6 +20,17 @@ void BSM_fsm(SmHandle_t *handle)
     {
         case BL_STATE_INIT:
             break;
+
+        case BL_STATE_START:
+        // WILL NOT RETURN
+            BAP_jump();
+            break;
+
+        case BL_TIMER_START
+
+            break;
+        
+        
         default:
             break;
     }

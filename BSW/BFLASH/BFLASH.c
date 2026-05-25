@@ -55,8 +55,10 @@ __attribute__((ramfunc)) void BFLASH_init(void)
 
 }
 
-void BFLASH_clear(void)
+void BFLASH_clear(BflashSector_t sector)
 {
+    
+
     
 }
 
