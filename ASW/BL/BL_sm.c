@@ -1,27 +1,6 @@
 /*
-|===============================================================================
-|
-| File:         BL_sm.c
-|
-| Project:      DAANAA C2000 BOOTLOADER
-|
-| Processor:    TI TMS320F28003x
-| Compiler:     TI C2000 compiler 22.6.0
-|
-| Component:    Bootloader Project Component
-|
-| Description:  Bootloader state machine API
-|
-| Copyright:    Copyright (C) 2025 Daanaa Resolution Inc.
-|
-|               All Rights Reserved. Reproduction or disclosure of this file 
-|               or its Contents without the prior written consent of Daanaa 
-|               Resolution Inc is prohibited.
-|===============================================================================
-| Version   Date        Author  Description
-|-------------------------------------------------------------------------------
-|  1.00   DD-MMM-2025   AP      Initial Release.
-|=============================================================================*/
+ * Bootloader state machine.
+ */
 
 /*=== INCLUDE FILES ==========================================================*/
 
@@ -172,8 +151,8 @@ static void F_menuStateProcess
                 BL_ifReplyReqStatusTx(BL_REQUEST_STATUS_IN_PROGRESS, F_ctx.currMsg.request.mux);
                 
                 // Update the app version and app size (size in words)
-                F_ctx.vMetadata.appVersion = F_ctx.currMsg.request.updateInitialize.appVersion;
-                F_ctx.vMetadata.appSizeWords = F_ctx.currMsg.request.updateInitialize.appSize;
+                F_ctx.vMetadata.appVersion = F_ctx.currMsg.request.appVersion;
+                F_ctx.vMetadata.appSizeWords = F_ctx.currMsg.request.appSize;
                 
                 // Transition to UPDATE iff app will fit into flash memory
                 if (F_ctx.vMetadata.appSizeWords <= BL_IMG_APPLICATION_REGION_SIZE_WORDS)
@@ -259,8 +238,8 @@ static void F_updateStateProcess
                 BL_ifReplyReqStatusTx(BL_REQUEST_STATUS_IN_PROGRESS, F_ctx.currMsg.request.mux);
 
                 // Store the address and length of the cluster
-                F_ctx.clstr.address = F_ctx.currMsg.request.loadConfigure.clusterAddress;
-                F_ctx.clstr.length = F_ctx.currMsg.request.loadConfigure.clusterLength;
+                F_ctx.clstr.address = F_ctx.currMsg.request.clusterAddress;
+                F_ctx.clstr.length = F_ctx.currMsg.request.clusterLength;
                 
                 // Configure the cluster load process and reply with COMPLETE or FAILED
                 if (BL_clstrConfig(&F_ctx.clstr) == OK)
@@ -293,7 +272,7 @@ static void F_updateStateProcess
                 BL_clstrCrcCompute(&F_ctx.clstr);
                 
                 // If the computed crc is correct, proceed with flashing
-                if (F_ctx.clstr.crc == F_ctx.currMsg.request.bufferFlash.clusterCrc)
+                if (F_ctx.clstr.crc == F_ctx.currMsg.request.clusterCrc)
                 {
                     if (BL_clstrFlash() == OK)
                     {
@@ -341,7 +320,7 @@ static void F_updateStateProcess
             case BL_REQUEST_MUX_UPDATE_FINISH:
             {
                 BL_ifReplyReqStatusTx(BL_REQUEST_STATUS_IN_PROGRESS, F_ctx.currMsg.request.mux);
-                F_ctx.vMetadata.appCrc = F_ctx.currMsg.request.updateFinish.appCrc;
+                F_ctx.vMetadata.appCrc = F_ctx.currMsg.request.appCrc;
                 
                 if (BL_imgVariableMetadataErase() == OK)
                 {
@@ -635,7 +614,7 @@ Uint16_t BL_smExe
             TMR_createAndStart(&timeoutTmr, BL_CAN_TX_PENDING_TIMEOUT_MS);
             Bool_t timerExpired = FALSE;
             while ((timerExpired == FALSE) &&
-                   (MSG_txPending() == TRUE))
+                   (BL_ifTxPending() == TRUE))
             {
                 timerExpired = TMR_updateAndCheckExpiry(&timeoutTmr);
             }

@@ -1,33 +1,12 @@
 /*
-|===============================================================================
-|
-| File:         BL_clstr.c
-|
-| Project:      DAANAA C2000 BOOTLOADER
-|
-| Processor:    TI TMS320F28003x
-| Compiler:     TI C2000 compiler 22.6.0
-|
-| Component:    Bootloader Project Component
-|
-| Description:  Bootloader cluster processing API source
-|
-| Copyright:    Copyright (C) 2025 Daanaa Resolution Inc.
-|
-|               All Rights Reserved. Reproduction or disclosure of this file 
-|               or its Contents without the prior written consent of Daanaa 
-|               Resolution Inc is prohibited.
-|===============================================================================
-| Version   Date        Author  Description
-|-------------------------------------------------------------------------------
-|  1.00   DD-MMM-2025   AP      Initial Release.
-|=============================================================================*/
+ * Bootloader data cluster handling.
+ */
 
 /*=== INCLUDE FILES ==========================================================*/
 #include <string.h>
 
 #include "BL_clstr.h"
-#include "CRC.h"
+#include "BCRC.h"
 #include "BootloaderDefs.h"
 
 /*=== #DEFINES ===============================================================*/
@@ -228,8 +207,9 @@ void BL_clstrCrcCompute
 )
 {
     Uint16_t clusterStartIndex = clstr->address - F_blockAddress;
-    clstr->crc =  CRC_compute(F_blockBuffer + clusterStartIndex, 
-                              clstr->length, BL_CLSTR_INITIAL_CRC); 
+    clstr->crc = BCRC_compute(F_blockBuffer + clusterStartIndex,
+                              clstr->length,
+                              BL_CLSTR_INITIAL_CRC);
 }
 
 /*

@@ -1,27 +1,6 @@
 /*
-|===============================================================================
-|
-| File:         BL_ctx.h
-|
-| Project:      DAANAA C2000 BOOTLOADER
-|
-| Processor:    TI TMS320F28003x
-| Compiler:     TI C2000 compiler 22.6.0
-|
-| Component:    Bootloader Project Header File
-|
-| Description:  Header file for bootloader context and data API
-|
-| Copyright:    Copyright (C) 2025 Daanaa Resolution Inc.
-|
-|               All Rights Reserved. Reproduction or disclosure of this file 
-|               or its Contents without the prior written consent of Daanaa 
-|               Resolution Inc is prohibited.
-|===============================================================================
-| Version   Date        Author  Description
-|-------------------------------------------------------------------------------
-|  1.00   DD-MMM-2025   AP      Initial Release.
-|=============================================================================*/
+ * Bootloader state machine context.
+ */
 
 #ifndef _BL_CTX_H_
 #define _BL_CTX_H_    /* make sure header is not included again  */

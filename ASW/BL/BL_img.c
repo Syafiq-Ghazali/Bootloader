@@ -1,34 +1,13 @@
 /*
-|===============================================================================
-|
-| File:         BL_img.c
-|
-| Project:      DAANAA C2000 BOOTLOADER
-|
-| Processor:    TI TMS320F28003x
-| Compiler:     TI C2000 compiler 22.6.0
-|
-| Component:    Bootloader Project Component
-|
-| Description:  Application image handling functions
-|
-| Copyright:    Copyright (C) 2025 Daanaa Resolution Inc.
-|
-|               All Rights Reserved. Reproduction or disclosure of this file 
-|               or its Contents without the prior written consent of Daanaa 
-|               Resolution Inc is prohibited.
-|===============================================================================
-| Version   Date        Author  Description
-|-------------------------------------------------------------------------------
-|  1.00   DD-MMM-2025   AP      Initial Release.
-|=============================================================================*/
+ * Application image handling.
+ */
 
 /*=== INCLUDE FILES ==========================================================*/
 
 #include <string.h>
 
 #include "BL_img.h"
-#include "CRC.h"
+#include "BCRC.h"
 
 /*=== #DEFINES ===============================================================*/
 
@@ -325,8 +304,9 @@ Uint32_t BL_imgCrcCompute
     void
 )
 {
-    return CRC_compute((Uint16_t *)(BL_IMG_APPLICATION_BEGIN_ADDR), 
-                       BL_IMG_APPLICATION_REGION_SIZE_WORDS, BL_IMG_INITIAL_CRC);
+    return BCRC_compute((Uint16_t *)(BL_IMG_APPLICATION_BEGIN_ADDR),
+                        BL_IMG_APPLICATION_REGION_SIZE_WORDS,
+                        BL_IMG_INITIAL_CRC);
 }
 
 /*

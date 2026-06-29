@@ -1,27 +1,6 @@
 /*
-|===============================================================================
-|
-| File:         BL_img.h
-|
-| Project:      DAANAA C2000 BOOTLOADER
-|
-| Processor:    TI TMS320F28003x
-| Compiler:     TI C2000 compiler 22.6.0
-|
-| Component:    Bootloader Project Header File
-|
-| Description:  Application image function prototypes typedefs and constants
-|
-| Copyright:    Copyright (C) 2025 Daanaa Resolution Inc.
-|
-|               All Rights Reserved. Reproduction or disclosure of this file 
-|               or its Contents without the prior written consent of Daanaa 
-|               Resolution Inc is prohibited.
-|===============================================================================
-| Version   Date        Author  Description
-|-------------------------------------------------------------------------------
-|  1.00   DD-MMM-2025   AP      Initial Release.
-|=============================================================================*/
+ * Application image definitions.
+ */
 
 #ifndef _BL_IMG_H_
 #define _BL_IMG_H_    /* make sure header is not included again  */
@@ -40,7 +19,7 @@
 
 #define BL_IMG_APPLICATION_START_SECTOR         (BFLASH_BANK0_SECTOR5)
 #define BL_IMG_APPLICATION_END_SECTOR           (BFLASH_NUM_SECTORS)
-#define BL_IMG_APPLICATION_BEGIN_ADDR           (0x85000)
+#define BL_IMG_APPLICATION_BEGIN_ADDR           (0x85000uL)
 #define BL_IMG_APPLICATION_REGION_SIZE_WORDS    (BFLASH_END + 1uL - BL_IMG_APPLICATION_BEGIN_ADDR)
 
 #define BL_IMG_VARIABLE_METADATA_SECTOR         (BFLASH_BANK0_SECTOR3)

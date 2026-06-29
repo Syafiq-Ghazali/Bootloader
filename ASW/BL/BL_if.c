@@ -1,594 +1,77 @@
 /*
-|===============================================================================
-|
-| File:         BL_if.c
-|
-| Project:      DAANAA C2000 BOOTLOADER
-|
-| Processor:    TI TMS320F28003x
-| Compiler:     TI C2000 compiler 22.6.0
-|
-| Component:    Bootloader Project Component
-|
-| Description:  Bootloader communication interface API
-|
-| Copyright:    Copyright (C) 2025 Daanaa Resolution Inc.
-|
-|               All Rights Reserved. Reproduction or disclosure of this file 
-|               or its Contents without the prior written consent of Daanaa 
-|               Resolution Inc is prohibited.
-|===============================================================================
-| Version   Date        Author  Description
-|-------------------------------------------------------------------------------
-|  1.00   DD-MMM-2025   AP      Initial Release.
-|=============================================================================*/
-
-/*=== INCLUDE FILES ==========================================================*/
+ * Bootloader CAN protocol interface.
+ */
 
 #include <string.h>
 #include "BL_if.h"
+#include "BRD_CAN.h"
 
-/*=== #DEFINES ===============================================================*/
+static Uint16_t F_canEncode     (CanMsg_t *frame, const IfMessage_t *msg);
+static Uint16_t F_canDecode     (IfMessage_t *msg, const CanMsg_t *frame);
+static void     F_frameClear    (CanMsg_t *frame);
+static void     F_writeU8       (CanMsg_t *frame, Uint16_t index, Uint16_t value);
+static void     F_writeU16      (CanMsg_t *frame, Uint16_t index, Uint16_t value);
+static void     F_writeU32      (CanMsg_t *frame, Uint16_t index, Uint32_t value);
+static Uint16_t F_readU8        (const CanMsg_t *frame, Uint16_t index);
+static Uint16_t F_readU16       (const CanMsg_t *frame, Uint16_t index);
+static Uint32_t F_readU32       (const CanMsg_t *frame, Uint16_t index);
 
-/*=== TYPE DEFINITIONS =======================================================*/
-
-/*=== ENUMERATIONS ===========================================================*/
-
-/*=== EXTERNALS ==============================================================*/
-
-/*=== PRIVATE FUNCTION PROTOTYPES ============================================*/
-
-static Uint16_t F_canEncode(can_t *frame, const IfMessage_t *msg);
-static Uint16_t F_canDecode(IfMessage_t *msg, const can_t *frame);
-
-/*=== GLOBAL DATA ============================================================*/
-
-/*=== PRIVATE DATA ===========================================================*/
-
-static IfMessage_t F_ifRxQueueBuffer[BL_IF_RX_QUEUE_LENGTH];
-static F_ifQueue_t F_ifRxQueue = {0};
-
-/*
-|===============================================================================
-|
-| Function:         F_canEncode
-|
-| Description:      Encodes a reply message into a CAN frame
-|
-| Dependencies:
-|
-| Notes:            Primarily used to encode reply messages but other
-|                   messages can also be encoded (useful for testing)
-|
-| Side Effects:
-|
-| Return Value:     OK OR FAIL
-|
-|===============================================================================
-| Variable     Access  Description  (I=input O=output I/O=in/out)
-|-------------------------------------------------------------------------------
-| frame        O       CAN frame destination
-| msg          I       BL_REPLY message source
-|=============================================================================*/
-
-static Uint16_t F_canEncode
-(
-    can_t *frame,
-    const IfMessage_t *msg
-)
-{
-    Uint16_t ret = FAIL;
-
-    if ((msg == NULL) || (frame == NULL)) 
-    {
-        ret = FAIL;
-        return ret;
-    }
-    
-    // Encode the CAN payload based on the message type (based on CAN ID)
-    switch (msg->type)
-    {
-        case BL_IF_MESSAGE_REPLY:
-        {
-            // Message is muxed, so insert payload signals based on the mux
-            switch (msg->reply.mux)
-            {
-                case BL_REPLY_MUX_REQSTATUS:
-                {
-                    MSG_signalInsert(frame, (Uint64_t)msg->reply.reqStatus.requestStatus, 0, 8);
-                    MSG_signalInsert(frame, (Uint64_t)msg->reply.reqStatus.requestMux, 8, 8);
-                    ret = OK;
-                    break;
-                }
-                case BL_REPLY_MUX_VERSION:
-                {
-                    MSG_signalInsert(frame, (Uint64_t)msg->reply.version.bootloaderVersion, 0, 16);
-                    MSG_signalInsert(frame, (Uint64_t)msg->reply.version.appVersion, 16, 16);
-                    MSG_signalInsert(frame, (Uint64_t)msg->reply.version.hardwareVersion, 32, 16);
-                    ret = OK;
-                    break;
-                }
-                case BL_REPLY_MUX_SYSSTATUS:
-                {
-                    MSG_signalInsert(frame, (Uint64_t)msg->reply.sysStatus.imageCrc, 0, 32);
-                    MSG_signalInsert(frame, (Uint64_t)msg->reply.sysStatus.appValid, 32, 1);
-                    MSG_signalInsert(frame, (Uint64_t)msg->reply.sysStatus.errorReason, 40, 8);
-                    ret = OK;
-                    break;
-                }
-                default:
-                {
-                    ret = FAIL;
-                    return ret;
-                }
-            }
-            
-            // Write the mux to the CAN frame
-            MSG_signalInsert(frame, (Uint64_t)msg->reply.mux, 56, 8);
- 
-            // Write the CAN ID into the CAN frame
-            frame->id = BL_IF_CAN_ID_REPLY;
-
-            break;
-        }
-
-        case BL_IF_MESSAGE_REQUEST:
-        {
-            // Insert payload signals based on the mux
-            switch(msg->request.mux)
-            {
-                case BL_REQUEST_MUX_UPDATE_INITIALIZE:
-                {
-                    MSG_signalInsert(frame, (Uint64_t)msg->request.updateInitialize.appSize, 0, 32);
-                    MSG_signalInsert(frame, (Uint64_t)msg->request.updateInitialize.appVersion, 32, 16);
-                    ret = OK;
-                    break;
-                }
-                case BL_REQUEST_MUX_LOAD_CONFIGURE:
-                {
-                    MSG_signalInsert(frame, (Uint64_t)msg->request.loadConfigure.clusterAddress, 0, 32);
-                    MSG_signalInsert(frame, (Uint64_t)msg->request.loadConfigure.clusterLength, 32, 16);
-                    ret = OK;
-                    break;
-                }
-                case BL_REQUEST_MUX_BUFFER_FLASH:
-                {
-                    MSG_signalInsert(frame, (Uint64_t)msg->request.bufferFlash.clusterCrc, 0, 32);
-                    ret = OK;
-                    break;
-                }
-                case BL_REQUEST_MUX_UPDATE_FINISH:
-                {
-                    MSG_signalInsert(frame, (Uint64_t)msg->request.updateFinish.appCrc, 0, 32);
-                    ret = OK;
-                    break;
-                }
-                case BL_REQUEST_MUX_APP_ERASE:
-                case BL_REQUEST_MUX_APP_RUN:
-                case BL_REQUEST_MUX_RESET:
-                case BL_REQUEST_MUX_INFO:
-                {
-                    ret = OK;
-                    break;
-                }
-                default:
-                {
-                    ret = FAIL;
-                    return ret;
-                }
-            }
-
-            // Write the mux to the CAN frame
-            MSG_signalInsert(frame, (Uint64_t)msg->request.mux, 56, 8);
- 
-            // Write the CAN ID into the CAN frame
-            frame->id = BL_IF_CAN_ID_REQUEST;
-
-            break;
-        }
-        
-        // Data message consists purely of up to 8 bytes of data
-        case BL_IF_MESSAGE_DATA:
-        {
-            // Copy the payload into the CAN frame buffer
-            // Note: CAN frame buffer holds values by byte,
-            // while BL_if message data is by word
-            // Cannot use memcpy here
-            Uint16_t i = 0;
-            for (i = 0; i < msg->lenBytes; i++)
-            {
-                Uint16_t shiftVal = (i % 2 == 0) ? 0 : 8;
-                frame->buf[i] = (msg->data.dataWords[i / 2] >> shiftVal) & 0xFF;
-            }
-
-            // Write the CAN ID into the CAN frame
-            frame->id = BL_IF_CAN_ID_DATA;
-
-            ret = OK;
-            break;
-        }
-
-        default:
-        {
-            ret = FAIL;
-            return ret;
-        }
-    }
-
-    // Write CAN buffer length
-    frame->bufLen = msg->lenBytes;
-
-    return ret;
-}
-
-/*
-|===============================================================================
-|
-| Function:         F_canDecode
-|
-| Description:      Decodes a request or data message into a IfMessage_t struct
-|
-| Dependencies:
-|
-| Notes:            This function can decode any message type, however it is
-|                   typically used to decode an incoming request or data message
-|                   
-|                   RAMFUNC attribute is installed as this function might be called
-|                   if a CAN interrupt occurs during a flash modification operation
-|
-| Side Effects:
-|
-| Return Value:     OK or FAIL
-|
-|===============================================================================
-| Variable     Access  Description  (I=input O=output I/O=in/out)
-|-------------------------------------------------------------------------------
-| msg          O       BL_REQUEST or BL_DATA message destination
-| frame        I       CAN frame source
-|=============================================================================*/
-
-RAMFUNC static Uint16_t F_canDecode
-(
-    IfMessage_t *msg,
-    const can_t *frame
-)
-{
-    Uint16_t ret = FAIL;
-
-    // CAN ID must be request or data type
-    if ((msg == NULL) || (frame == NULL) || 
-        ((frame->id != BL_IF_CAN_ID_REQUEST) && 
-         (frame->id != BL_IF_CAN_ID_DATA) &&
-         (frame->id != BL_IF_CAN_ID_REPLY)))
-    {
-        ret = FAIL;
-        return ret;
-    }
-
-    switch (frame->id)
-    {
-        case BL_IF_CAN_ID_REQUEST:
-        {
-            msg->type = BL_IF_MESSAGE_REQUEST;
-
-            // Decode the CAN frame based on the mux
-            msg->request.mux= (IfMux_t)MSG_signalExtract(frame, 56, 8);
-
-            switch (msg->request.mux)
-            {
-                case BL_REQUEST_MUX_UPDATE_INITIALIZE:
-                {
-                    msg->request.updateInitialize.appSize = (Uint32_t)MSG_signalExtract(frame, 0, 32);
-                    msg->request.updateInitialize.appVersion = (Uint16_t)MSG_signalExtract(frame, 32, 16);
-                    ret = OK;
-                    break;
-                }
-
-                case BL_REQUEST_MUX_LOAD_CONFIGURE:
-                {
-                    msg->request.loadConfigure.clusterAddress = (Uint32_t)MSG_signalExtract(frame, 0, 32);
-                    msg->request.loadConfigure.clusterLength = (Uint16_t)MSG_signalExtract(frame, 32, 16);
-                    ret = OK;
-                    break;
-                }
-
-                case BL_REQUEST_MUX_BUFFER_FLASH:
-                {
-                    msg->request.bufferFlash.clusterCrc = (Uint32_t)MSG_signalExtract(frame, 0, 32);
-                    ret = OK;
-                    break;
-                }
-
-                case BL_REQUEST_MUX_UPDATE_FINISH:
-                {
-                    msg->request.updateFinish.appCrc = (Uint32_t)MSG_signalExtract(frame, 0, 32);
-                    ret = OK;
-                    break;
-                }
-
-                case BL_REQUEST_MUX_APP_ERASE:
-                case BL_REQUEST_MUX_APP_RUN:
-                case BL_REQUEST_MUX_RESET:
-                case BL_REQUEST_MUX_INFO:
-                {
-                    ret = OK;
-                    break;
-                }
-                
-                default:
-                {
-                    ret = FAIL;
-                    return ret;
-                }
-            }
-
-            break;
-        }
-        case BL_IF_CAN_ID_REPLY:
-        {
-            msg->type = BL_IF_MESSAGE_REPLY;
-
-            // Decode the CAN frame based on the mux
-            msg->reply.mux = (IfMux_t)MSG_signalExtract(frame, 56, 8);
-
-            switch (msg->reply.mux)
-            {
-                case BL_REPLY_MUX_REQSTATUS:
-                {
-                    msg->reply.reqStatus.requestStatus = (IfRequestStatus_t)MSG_signalExtract(frame, 0, 8);
-                    msg->reply.reqStatus.requestMux = (IfMux_t)MSG_signalExtract(frame, 8, 8);
-                    ret = OK;
-                    break;
-                }
-
-                case BL_REPLY_MUX_VERSION:
-                {
-                    msg->reply.version.bootloaderVersion = (Uint16_t)MSG_signalExtract(frame, 0, 16);
-                    msg->reply.version.appVersion= (Uint16_t)MSG_signalExtract(frame, 16, 16);
-                    msg->reply.version.hardwareVersion= (Uint16_t)MSG_signalExtract(frame, 32, 16);
-                    ret = OK;
-                    break;
-                }
-
-                case BL_REPLY_MUX_SYSSTATUS:
-                {
-                    msg->reply.sysStatus.imageCrc = (Uint32_t)MSG_signalExtract(frame, 0, 32);
-                    msg->reply.sysStatus.appValid = (Bool_t)MSG_signalExtract(frame, 32, 1);
-                    msg->reply.sysStatus.errorReason = (IfErrorReason_t)MSG_signalExtract(frame, 40, 8);
-                    ret = OK;
-                    break;
-                }
-
-                default:
-                {
-                    ret = FAIL;
-                    break;
-                }
-            }
-
-            break;
-        }
-        case BL_IF_CAN_ID_DATA:
-        {
-            msg->type = BL_IF_MESSAGE_DATA;
-            // Copy the CAN frame buffer into the data message
-            // Note: CAN frame buffer holds values by byte,
-            // while BL_if message data is by word
-            // Cannot use memcpy here
-            
-            Uint16_t i = 0;
-            Uint16_t lenWords = (frame->bufLen + 1) / 2;
-            for (i = 0; i < lenWords; i++)
-            {
-                msg->data.dataWords[i] = 0;
-                msg->data.dataWords[i] |= (frame->buf[2 * i] & 0xFF);
-                if (((2 * i) + 1) < frame->bufLen)
-                {
-                    msg->data.dataWords[i] |= ((frame->buf[(2 * i) + 1] << 8) & 0xFF00);
-                }
-            }
-    
-            ret = OK;
-            break;
-        }
-        default:
-        {
-            ret = FAIL;
-            break;
-        }
-    }
- 
-    // Write message length
-    msg->lenBytes = frame->bufLen;
-
-    return ret;
-}
-
-/*
-|===============================================================================
-|
-| Function:         BL_ifInit
-|
-| Description:      Initializes the BL_if module
-|
-| Dependencies:     MSG and BCAN modules must be initialized first
-|
-| Notes:
-|
-| Side Effects:
-|
-| Return Value:
-|
-|===============================================================================
-| Variable     Access  Description  (I=input O=output I/O=in/out)
-|-------------------------------------------------------------------------------
-|=============================================================================*/
+static CanHandle_t *F_canHandle = &BRD_CAN_HANDLE[CAN_INSTANCE_1];
 
 void BL_ifInit
 (
     void
 )
 {
-    // Initialize the Rx queue for BL_if
-    F_ifQueueInit(&F_ifRxQueue, F_ifRxQueueBuffer, BL_IF_RX_QUEUE_LENGTH);
-
-    // Install the MSG Rx callback
-    MSG_rxHandlerSet(BL_ifMsgRxHandler);
+    F_canHandle = &BRD_CAN_HANDLE[CAN_INSTANCE_1];
 }
-
-/*
-|===============================================================================
-|
-| Function:         BL_ifTx
-|
-| Description:      Transmits a BL_if message
-|
-| Dependencies:
-|
-| Notes:            
-|
-| Side Effects:
-|
-| Return Value:     OK or FAIL, depending on whether message was transmitted
-|
-|===============================================================================
-| Variable     Access  Description  (I=input O=output I/O=in/out)
-|-------------------------------------------------------------------------------
-| msg          I       BL_if message to be transmitted
-|=============================================================================*/
 
 Uint16_t BL_ifTx
 (
     const IfMessage_t *msg
 )
 {
-    Uint16_t ret = FAIL;
-    can_t frame = {0};
-    
-    // Convert IfMessage_t type message into can_t type CAN frame
-    ret = F_canEncode(&frame, msg);
-    
-    // Transmit CAN message using MSG API
-    if (ret != FAIL)
+    CanMsg_t frame = {0};
+
+    if ((F_canEncode(&frame, msg) != OK) ||
+        (BCAN_tx(F_canHandle, &frame) != CAN_STATUS_TX_OK))
     {
-        ret = MSG_tx(&frame);
+        return FAIL;
     }
 
-    return (ret);
+    return OK;
 }
-
-/*
-|===============================================================================
-|
-| Function:         BL_ifRx
-|
-| Description:      Polls and receives a bootloader interface message
-|
-| Dependencies:     BL_ifInit, MSG_initialize, and BCAN_initialize must all
-|                   have been called
-|
-| Notes:
-|
-| Side Effects:
-|
-| Return Value:     OK or FAIL
-|
-|===============================================================================
-| Variable     Access  Description  (I=input O=output I/O=in/out)
-|-------------------------------------------------------------------------------
-| msg          O       Bootloader interface message destination
-|=============================================================================*/
 
 Uint16_t BL_ifRx
 (
     IfMessage_t *msg
 )
 {
-    Uint16_t ret = FAIL;
+    CanMsg_t frame = {0};
 
-    if (F_ifQueueIsEmpty(&F_ifRxQueue) == FALSE)
+    if ((msg == NULL) || (F_canHandle == NULL))
     {
-        F_ifQueuePop(&F_ifRxQueue, msg);
-        ret = OK;
-    }
-    else 
-    {
-        ret = FAIL;
+        return FAIL;
     }
 
-    return ret;
-}
-
-
-/*
-|===============================================================================
-|
-| Function:         BL_ifMsgRxHandler
-|
-| Description:      Handler function to be installed into MSG Rx Callback
-|
-| Dependencies:
-|
-| Notes:            RAMFUNC attribute is installed as this function might be called
-|                   during a flash modification operation
-|
-| Side Effects:
-|
-| Return Value:     TRUE or FALSE, identifying whether the received CAN frame 
-|                   is intended for the bootloader
-|
-|===============================================================================
-| Variable     Access  Description  (I=input O=output I/O=in/out)
-|-------------------------------------------------------------------------------
-| frame        I       Incoming CAN frame from MSG module
-|=============================================================================*/
-RAMFUNC Bool_t BL_ifMsgRxHandler
-(
-    const can_t *frame
-)
-{
-    IfMessage_t rxMsg;
-    Bool_t isValidIfMsg = FALSE;
-
-    if (F_ifQueueIsFull(&F_ifRxQueue) == FALSE)
+    while (BCAN_rx(F_canHandle, &frame) == CAN_STATUS_RX_OK)
     {
-        isValidIfMsg = ((frame->id == BL_IF_CAN_ID_REQUEST) ||
-                        (frame->id == BL_IF_CAN_ID_DATA));
-
-        if (isValidIfMsg)
+        if (F_canDecode(msg, &frame) == OK)
         {
-            // Decode the CAN frame and convert it into type IfMessage_t
-            F_canDecode(&rxMsg, frame);
-
-            // Push into BL_if message queue
-            F_ifQueuePush(&F_ifRxQueue, &rxMsg);
+            return OK;
         }
     }
 
-    return isValidIfMsg;
+    return FAIL;
 }
 
-/*
-|===============================================================================
-|
-| Function:         BL_ifReplyReqStatusTx
-|
-| Description:
-|
-| Dependencies:     Transmits a BL_REPLY_REQSTATUS message
-|
-| Notes:
-|
-| Side Effects:
-|
-| Return Value:
-|
-|===============================================================================
-| Variable       Access  Description  (I=input O=output I/O=in/out)
-|-------------------------------------------------------------------------------
-| requestStatus  I       Status of the request
-| requestMux     I       Multiplexor value of the associated request message
-|=============================================================================*/
+Bool_t BL_ifTxPending
+(
+    void
+)
+{
+    return BCAN_txPending(F_canHandle);
+}
 
 Uint16_t BL_ifReplyReqStatusTx
 (
@@ -597,37 +80,17 @@ Uint16_t BL_ifReplyReqStatusTx
 )
 {
     IfMessage_t msg;
+
+    (void)memset(&msg, 0, sizeof(msg));
+
     msg.type = BL_IF_MESSAGE_REPLY;
     msg.reply.mux = BL_REPLY_MUX_REQSTATUS;
-    msg.reply.reqStatus.requestStatus = requestStatus;
-    msg.reply.reqStatus.requestMux = requestMux;
+    msg.reply.requestStatus = requestStatus;
+    msg.reply.requestMux = requestMux;
     msg.lenBytes = BL_IF_CAN_LEN_REPLY;
-    
+
     return BL_ifTx(&msg);
 }
-
-/*
-|===============================================================================
-|
-| Function:         BL_ifReplyVersionTx
-|
-| Description:      Transmits a BL_REPLY_VERSION message
-|
-| Dependencies:
-|
-| Notes:
-|
-| Side Effects:
-|
-| Return Value:     OK or FAIL
-|
-|===============================================================================
-| Variable           Access  Description  (I=input O=output I/O=in/out)
-|-------------------------------------------------------------------------------
-| bootloaderVersion  I       Bootloader version
-| appVersion         I       Application version
-| hardwareVersion    I       Hardware version
-|=============================================================================*/
 
 Uint16_t BL_ifReplyVersionTx
 (
@@ -637,55 +100,367 @@ Uint16_t BL_ifReplyVersionTx
 )
 {
     IfMessage_t msg;
+
+    (void)memset(&msg, 0, sizeof(msg));
+
     msg.type = BL_IF_MESSAGE_REPLY;
     msg.reply.mux = BL_REPLY_MUX_VERSION;
-    msg.reply.version.bootloaderVersion = bootloaderVersion;
-    msg.reply.version.appVersion = appVersion;
-    msg.reply.version.hardwareVersion = hardwareVersion;
+    msg.reply.bootloaderVersion = bootloaderVersion;
+    msg.reply.appVersion = appVersion;
+    msg.reply.hardwareVersion = hardwareVersion;
     msg.lenBytes = BL_IF_CAN_LEN_REPLY;
-    
+
     return BL_ifTx(&msg);
 }
 
-/*
-|===============================================================================
-|
-| Function:         BL_ifReplySysStatusTx
-|
-| Description:      Transmits a BL_REPLY_SYSSTATUS message
-|
-| Dependencies:
-|
-| Notes:
-|
-| Side Effects:
-|
-| Return Value:     OK or FAIL
-|
-|===============================================================================
-| Variable      Access  Description  (I=input O=output I/O=in/out)
-|-------------------------------------------------------------------------------
-| imageCrc      I       Firmware image CRC-32 value
-| appValid      I       Boolean telling whether app is valid or not
-| errorReason   I       Enum denoting any potential error
-|=============================================================================*/
-
 Uint16_t BL_ifReplySysStatusTx
 (
-    Uint32_t        imageCrc,
-    Bool_t          appValid,
+    Uint32_t imageCrc,
+    Bool_t appValid,
     IfErrorReason_t errorReason
 )
 {
     IfMessage_t msg;
+
+    (void)memset(&msg, 0, sizeof(msg));
+
     msg.type = BL_IF_MESSAGE_REPLY;
     msg.reply.mux = BL_REPLY_MUX_SYSSTATUS;
-    msg.reply.sysStatus.imageCrc = imageCrc;
-    msg.reply.sysStatus.appValid = appValid;
-    msg.reply.sysStatus.errorReason = errorReason;
+    msg.reply.imageCrc = imageCrc;
+    msg.reply.appValid = appValid;
+    msg.reply.errorReason = errorReason;
     msg.lenBytes = BL_IF_CAN_LEN_REPLY;
-    
+
     return BL_ifTx(&msg);
 }
 
-/*=== End of File ============================================================*/
+static Uint16_t F_canEncode
+(
+    CanMsg_t *frame,
+    const IfMessage_t *msg
+)
+{
+    Uint16_t i;
+
+    if ((frame == NULL) || (msg == NULL))
+    {
+        return FAIL;
+    }
+
+    F_frameClear(frame);
+
+    switch (msg->type)
+    {
+        case BL_IF_MESSAGE_REPLY:
+        {
+            frame->id = BL_IF_CAN_ID_REPLY;
+            frame->bufLen = BL_IF_CAN_LEN_REPLY;
+
+            switch (msg->reply.mux)
+            {
+                case BL_REPLY_MUX_REQSTATUS:
+                {
+                    F_writeU8(frame, 0u, (Uint16_t)msg->reply.requestStatus);
+                    F_writeU8(frame, 1u, (Uint16_t)msg->reply.requestMux);
+                    break;
+                }
+                case BL_REPLY_MUX_VERSION:
+                {
+                    F_writeU16(frame, 0u, msg->reply.bootloaderVersion);
+                    F_writeU16(frame, 2u, msg->reply.appVersion);
+                    F_writeU16(frame, 4u, msg->reply.hardwareVersion);
+                    break;
+                }
+                case BL_REPLY_MUX_SYSSTATUS:
+                {
+                    F_writeU32(frame, 0u, msg->reply.imageCrc);
+                    F_writeU8(frame, 4u, (Uint16_t)msg->reply.appValid);
+                    F_writeU8(frame, 5u, (Uint16_t)msg->reply.errorReason);
+                    break;
+                }
+                default:
+                {
+                    return FAIL;
+                }
+            }
+
+            F_writeU8(frame, 7u, (Uint16_t)msg->reply.mux);
+            break;
+        }
+
+        case BL_IF_MESSAGE_REQUEST:
+        {
+            frame->id = BL_IF_CAN_ID_REQUEST;
+            frame->bufLen = BL_IF_CAN_LEN_REQUEST;
+
+            switch (msg->request.mux)
+            {
+                case BL_REQUEST_MUX_UPDATE_INITIALIZE:
+                {
+                    F_writeU32(frame, 0u, msg->request.appSize);
+                    F_writeU16(frame, 4u, msg->request.appVersion);
+                    break;
+                }
+                case BL_REQUEST_MUX_LOAD_CONFIGURE:
+                {
+                    F_writeU32(frame, 0u, msg->request.clusterAddress);
+                    F_writeU16(frame, 4u, msg->request.clusterLength);
+                    break;
+                }
+                case BL_REQUEST_MUX_BUFFER_FLASH:
+                {
+                    F_writeU32(frame, 0u, msg->request.clusterCrc);
+                    break;
+                }
+                case BL_REQUEST_MUX_UPDATE_FINISH:
+                {
+                    F_writeU32(frame, 0u, msg->request.appCrc);
+                    break;
+                }
+                case BL_REQUEST_MUX_APP_ERASE:
+                case BL_REQUEST_MUX_APP_RUN:
+                case BL_REQUEST_MUX_RESET:
+                case BL_REQUEST_MUX_INFO:
+                {
+                    break;
+                }
+                default:
+                {
+                    return FAIL;
+                }
+            }
+
+            F_writeU8(frame, 7u, (Uint16_t)msg->request.mux);
+            break;
+        }
+
+        case BL_IF_MESSAGE_DATA:
+        {
+            frame->id = BL_IF_CAN_ID_DATA;
+            frame->bufLen = MIN(msg->lenBytes, BL_IF_CAN_LEN_DATA);
+
+            for (i = 0u; i < frame->bufLen; i++)
+            {
+                Uint16_t shift = ((i & 1u) == 0u) ? 0u : 8u;
+                frame->buf[i] = (msg->data.dataWords[i / 2u] >> shift) & 0xFFu;
+            }
+
+            break;
+        }
+
+        default:
+        {
+            return FAIL;
+        }
+    }
+
+    return OK;
+}
+
+static Uint16_t F_canDecode
+(
+    IfMessage_t *msg,
+    const CanMsg_t *frame
+)
+{
+    Uint16_t i;
+    Uint16_t lenWords;
+
+    if ((msg == NULL) || (frame == NULL))
+    {
+        return FAIL;
+    }
+
+    (void)memset(msg, 0, sizeof(IfMessage_t));
+    msg->lenBytes = MIN(frame->bufLen, BL_IF_CAN_LEN);
+
+    switch (frame->id)
+    {
+        case BL_IF_CAN_ID_REQUEST:
+        {
+            msg->type = BL_IF_MESSAGE_REQUEST;
+            msg->request.mux = (IfMux_t)F_readU8(frame, 7u);
+
+            switch (msg->request.mux)
+            {
+                case BL_REQUEST_MUX_UPDATE_INITIALIZE:
+                {
+                    msg->request.appSize = F_readU32(frame, 0u);
+                    msg->request.appVersion = F_readU16(frame, 4u);
+                    break;
+                }
+                case BL_REQUEST_MUX_LOAD_CONFIGURE:
+                {
+                    msg->request.clusterAddress = F_readU32(frame, 0u);
+                    msg->request.clusterLength = F_readU16(frame, 4u);
+                    break;
+                }
+                case BL_REQUEST_MUX_BUFFER_FLASH:
+                {
+                    msg->request.clusterCrc = F_readU32(frame, 0u);
+                    break;
+                }
+                case BL_REQUEST_MUX_UPDATE_FINISH:
+                {
+                    msg->request.appCrc = F_readU32(frame, 0u);
+                    break;
+                }
+                case BL_REQUEST_MUX_APP_ERASE:
+                case BL_REQUEST_MUX_APP_RUN:
+                case BL_REQUEST_MUX_RESET:
+                case BL_REQUEST_MUX_INFO:
+                {
+                    break;
+                }
+                default:
+                {
+                    return FAIL;
+                }
+            }
+
+            break;
+        }
+
+        case BL_IF_CAN_ID_REPLY:
+        {
+            msg->type = BL_IF_MESSAGE_REPLY;
+            msg->reply.mux = (IfMux_t)F_readU8(frame, 7u);
+
+            switch (msg->reply.mux)
+            {
+                case BL_REPLY_MUX_REQSTATUS:
+                {
+                    msg->reply.requestStatus = (IfRequestStatus_t)F_readU8(frame, 0u);
+                    msg->reply.requestMux = (IfMux_t)F_readU8(frame, 1u);
+                    break;
+                }
+                case BL_REPLY_MUX_VERSION:
+                {
+                    msg->reply.bootloaderVersion = F_readU16(frame, 0u);
+                    msg->reply.appVersion = F_readU16(frame, 2u);
+                    msg->reply.hardwareVersion = F_readU16(frame, 4u);
+                    break;
+                }
+                case BL_REPLY_MUX_SYSSTATUS:
+                {
+                    msg->reply.imageCrc = F_readU32(frame, 0u);
+                    msg->reply.appValid = (Bool_t)F_readU8(frame, 4u);
+                    msg->reply.errorReason = (IfErrorReason_t)F_readU8(frame, 5u);
+                    break;
+                }
+                default:
+                {
+                    return FAIL;
+                }
+            }
+
+            break;
+        }
+
+        case BL_IF_CAN_ID_DATA:
+        {
+            msg->type = BL_IF_MESSAGE_DATA;
+            lenWords = (msg->lenBytes + 1u) / 2u;
+
+            for (i = 0u; i < lenWords; i++)
+            {
+                msg->data.dataWords[i] = F_readU16(frame, (Uint16_t)(2u * i));
+            }
+
+            break;
+        }
+
+        default:
+        {
+            return FAIL;
+        }
+    }
+
+    return OK;
+}
+
+static void F_frameClear
+(
+    CanMsg_t *frame
+)
+{
+    Uint16_t i;
+
+    frame->id = 0u;
+    frame->bufLen = BL_IF_CAN_LEN;
+
+    for (i = 0u; i < BL_IF_CAN_LEN; i++)
+    {
+        frame->buf[i] = 0u;
+    }
+}
+
+static void F_writeU8
+(
+    CanMsg_t *frame,
+    Uint16_t index,
+    Uint16_t value
+)
+{
+    if (index < BL_IF_CAN_LEN)
+    {
+        frame->buf[index] = value & 0xFFu;
+    }
+}
+
+static void F_writeU16
+(
+    CanMsg_t *frame,
+    Uint16_t index,
+    Uint16_t value
+)
+{
+    F_writeU8(frame, index, value);
+    F_writeU8(frame, (Uint16_t)(index + 1u), value >> 8u);
+}
+
+static void F_writeU32
+(
+    CanMsg_t *frame,
+    Uint16_t index,
+    Uint32_t value
+)
+{
+    F_writeU8(frame, index, (Uint16_t)value);
+    F_writeU8(frame, (Uint16_t)(index + 1u), (Uint16_t)(value >> 8u));
+    F_writeU8(frame, (Uint16_t)(index + 2u), (Uint16_t)(value >> 16u));
+    F_writeU8(frame, (Uint16_t)(index + 3u), (Uint16_t)(value >> 24u));
+}
+
+static Uint16_t F_readU8
+(
+    const CanMsg_t *frame,
+    Uint16_t index
+)
+{
+    return (index < BL_IF_CAN_LEN) ? (frame->buf[index] & 0xFFu) : 0u;
+}
+
+static Uint16_t F_readU16
+(
+    const CanMsg_t *frame,
+    Uint16_t index
+)
+{
+    Uint16_t value = F_readU8(frame, index);
+    value |= (Uint16_t)(F_readU8(frame, (Uint16_t)(index + 1u)) << 8u);
+    return value;
+}
+
+static Uint32_t F_readU32
+(
+    const CanMsg_t *frame,
+    Uint16_t index
+)
+{
+    Uint32_t value = F_readU8(frame, index);
+    value |= ((Uint32_t)F_readU8(frame, (Uint16_t)(index + 1u))) << 8u;
+    value |= ((Uint32_t)F_readU8(frame, (Uint16_t)(index + 2u))) << 16u;
+    value |= ((Uint32_t)F_readU8(frame, (Uint16_t)(index + 3u))) << 24u;
+    return value;
+}

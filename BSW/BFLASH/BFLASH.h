@@ -1,12 +1,31 @@
-/* Include Files */
+/*
+ * Flash erase and programming API for the bootloader.
+ */
 
-#include "driverlib.h"
-#include "device.h"
-#include "F021_F28003x_C28x.h"
+#ifndef _BFLASH_H_
+#define _BFLASH_H_
 
-/* Enum */
+#include "Datatype.h"
 
-typedef enum {
+#define BFLASH_START                    (0x80000uL)
+
+#define BFLASH_BANK0_START              (BFLASH_START)
+#define BFLASH_BANK0_END                (0x8FFFFuL)
+#define BFLASH_BANK1_START              (0x90000uL)
+#define BFLASH_BANK1_END                (0x9FFFFuL)
+#define BFLASH_BANK2_START              (0xA0000uL)
+#define BFLASH_BANK2_END                (0xAFFFFuL)
+#define BFLASH_END                      (BFLASH_BANK2_END)
+
+#define BFLASH_SECTOR_SIZE_WORDS        (0x1000uL)
+#define BFLASH_BANK_SIZE_WORDS          (0x10000uL)
+#define BFLASH_SECTOR_SIZE_LONG_WORDS   (0x800uL)
+
+#define BFLASH_NUM_WAIT_STATES          (5u)
+#define BFLASH_BUFFER_SIZE_WORDS        (8u)
+
+typedef enum BflashSector_t
+{
     BFLASH_BANK0_SECTOR0,
     BFLASH_BANK0_SECTOR1,
     BFLASH_BANK0_SECTOR2,
@@ -23,7 +42,6 @@ typedef enum {
     BFLASH_BANK0_SECTOR13,
     BFLASH_BANK0_SECTOR14,
     BFLASH_BANK0_SECTOR15,
-
     BFLASH_BANK1_SECTOR0,
     BFLASH_BANK1_SECTOR1,
     BFLASH_BANK1_SECTOR2,
@@ -40,7 +58,6 @@ typedef enum {
     BFLASH_BANK1_SECTOR13,
     BFLASH_BANK1_SECTOR14,
     BFLASH_BANK1_SECTOR15,
-
     BFLASH_BANK2_SECTOR0,
     BFLASH_BANK2_SECTOR1,
     BFLASH_BANK2_SECTOR2,
@@ -57,14 +74,20 @@ typedef enum {
     BFLASH_BANK2_SECTOR13,
     BFLASH_BANK2_SECTOR14,
     BFLASH_BANK2_SECTOR15,
-
     BFLASH_NUM_SECTORS
 } BflashSector_t;
 
-/* Flash Wait states */
-#define BFLASH_WAITSTATES (5u)
+#pragma FUNC_ALWAYS_INLINE(BFLASH_sectorAddressGet)
+static inline Uint32_t BFLASH_sectorAddressGet
+(
+    BflashSector_t sector
+)
+{
+    return BFLASH_START + (BFLASH_SECTOR_SIZE_WORDS * (Uint32_t)sector);
+}
 
-/* Extern Function */
-extern void BFLASH_init(void);
-extern void BFLASH_clear(void);
-extern void BFLASH_write(void);
+extern void     BFLASH_initialize  (void);
+extern Uint16_t BFLASH_sectorErase (BflashSector_t sector);
+extern Uint16_t BFLASH_bufferWrite (Uint32_t flashAddr, Uint16_t *buffer, Uint32_t bufferLen);
+
+#endif
