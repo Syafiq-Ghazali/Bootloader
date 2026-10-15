@@ -63,6 +63,7 @@ typedef enum IfErrorReason_t
     BL_ERROR_DATA,
     BL_ERROR_LOAD_CONFIGURE,
     BL_ERROR_APP_SIZE,
+    BL_ERROR_APP_CRC,
 } IfErrorReason_t;
 
 typedef struct IfReplyMessage_t

@@ -124,9 +124,12 @@ static void F_menuStateProcess
                 // Reply with IN_PROGRESS
                 BL_ifReplyReqStatusTx(BL_REQUEST_STATUS_IN_PROGRESS, F_ctx.currMsg.request.mux);
 
+                F_ctx.appValid = FALSE;
+
                 // Erase the app flash sectors and reply with COMPLETE or FAIL or RETRY OR ERROR
                 if (BL_imgAppErase() == OK)
                 {
+                    F_ctx.vMetadata.appCrc = BL_imgCrcCompute();
                     BL_ifReplyReqStatusTx(BL_REQUEST_STATUS_COMPLETE, F_ctx.currMsg.request.mux);
                     
                     // Stay in MENU state
@@ -157,6 +160,8 @@ static void F_menuStateProcess
                 // Transition to UPDATE iff app will fit into flash memory
                 if (F_ctx.vMetadata.appSizeWords <= BL_IMG_APPLICATION_REGION_SIZE_WORDS)
                 {
+                    F_ctx.appValid = FALSE;
+                    F_ctx.clstrCrcRetryCount = 0u;
                     BL_ifReplyReqStatusTx(BL_REQUEST_STATUS_COMPLETE, F_ctx.currMsg.request.mux);
                     F_sm.nextState = BL_STATE_UPDATE;
                 }
@@ -276,6 +281,7 @@ static void F_updateStateProcess
                 {
                     if (BL_clstrFlash() == OK)
                     {
+                        F_ctx.clstrCrcRetryCount = 0u;
                         BL_ifReplyReqStatusTx(BL_REQUEST_STATUS_COMPLETE, F_ctx.currMsg.request.mux);
 
                         // Stay in UPDATE state
@@ -320,12 +326,24 @@ static void F_updateStateProcess
             case BL_REQUEST_MUX_UPDATE_FINISH:
             {
                 BL_ifReplyReqStatusTx(BL_REQUEST_STATUS_IN_PROGRESS, F_ctx.currMsg.request.mux);
-                F_ctx.vMetadata.appCrc = F_ctx.currMsg.request.appCrc;
+
+                // Validate the programmed image before committing its metadata.
+                // Keep the calculated CRC separate from the host's expected CRC.
+                F_ctx.vMetadata.appCrc = BL_imgCrcCompute();
+                if (F_ctx.vMetadata.appCrc != F_ctx.currMsg.request.appCrc)
+                {
+                    F_ctx.appValid = FALSE;
+                    F_ctx.errorReason = BL_ERROR_APP_CRC;
+                    BL_ifReplyReqStatusTx(BL_REQUEST_STATUS_FAILED, F_ctx.currMsg.request.mux);
+                    F_sm.nextState = BL_STATE_ERROR;
+                    break;
+                }
                 
                 if (BL_imgVariableMetadataErase() == OK)
                 {
                     if (BL_imgVariableMetadataWrite(&F_ctx.vMetadata) == OK)
                     {
+                        F_ctx.appValid = TRUE;
                         BL_ifReplyReqStatusTx(BL_REQUEST_STATUS_COMPLETE, F_ctx.currMsg.request.mux);
                         
                         F_sm.nextState = BL_STATE_RESET;
@@ -539,7 +557,8 @@ Uint16_t BL_smExe
             // Compute and check app image crc
             Uint32_t appCrcComp = BL_imgCrcCompute();
             F_ctx.appValid = (appCrcComp == F_ctx.vMetadata.appCrc);
-            F_ctx.errorReason = BL_ERROR_NONE;
+            F_ctx.vMetadata.appCrc = appCrcComp;
+            F_ctx.errorReason = F_ctx.appValid ? BL_ERROR_NONE : BL_ERROR_APP_CRC;
             
             // Send BL_REPLY_VERSION and BL_REPLY STATUS messages
             BL_ifReplyVersionTx(F_ctx.fMetadata.bootloaderVersion,
@@ -653,10 +672,11 @@ Uint16_t BL_smExe
             // it is best to send the current systemStatus, and, depending 
             // on the error, either reset, or wait for an explicit reset request.
             
-            // Transmit whatever app CRC is currently in the variable metadata section
+            // Validate against stored metadata, then report the calculated CRC.
             BL_imgVariableMetadataRead(&F_ctx.vMetadata);
             Uint32_t appCrcComp = BL_imgCrcCompute();
             F_ctx.appValid = (appCrcComp == F_ctx.vMetadata.appCrc);
+            F_ctx.vMetadata.appCrc = appCrcComp;
 
             BL_ifReplySysStatusTx(F_ctx.vMetadata.appCrc, F_ctx.appValid, F_ctx.errorReason);
             

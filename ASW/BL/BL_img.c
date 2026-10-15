@@ -304,7 +304,7 @@ Uint32_t BL_imgCrcCompute
     void
 )
 {
-    return BCRC_compute((Uint16_t *)(BL_IMG_APPLICATION_BEGIN_ADDR),
+    return BCRC_compute((const Uint16_t *)(BL_IMG_APPLICATION_BEGIN_ADDR),
                         BL_IMG_APPLICATION_REGION_SIZE_WORDS,
                         BL_IMG_INITIAL_CRC);
 }

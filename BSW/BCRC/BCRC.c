@@ -33,7 +33,7 @@ static Bool_t F_crcTableInit
 Uint32_t BCRC_compute
 (
     const Uint16_t *data,
-    Uint32_t size,
+    Uint32_t wordCount,
     Uint32_t crc
 )
 {
@@ -46,7 +46,7 @@ Uint32_t BCRC_compute
 
     crc = ~crc;
 
-    for (i = 0u; i < size; i++)
+    for (i = 0u; i < wordCount; i++)
     {
         Uint16_t lowerByte = data[i] & 0xFFu;
         Uint16_t upperByte = (data[i] >> 8u) & 0xFFu;
@@ -78,7 +78,7 @@ Uint32_t BCRC_wordAppend
 
 Uint32_t BCRC_ffffAdd
 (
-    Uint32_t n,
+    Uint32_t wordCount,
     Uint32_t crc
 )
 {
@@ -91,8 +91,10 @@ Uint32_t BCRC_ffffAdd
 
     crc = ~crc;
 
-    for (i = 0u; i < n; i++)
+    for (i = 0u; i < wordCount; i++)
     {
+        // An erased 16-bit flash word contributes two 0xFF bytes.
+        crc = (crc >> 8u) ^ F_crcTable[(crc ^ 0xFFu) & 0xFFu];
         crc = (crc >> 8u) ^ F_crcTable[(crc ^ 0xFFu) & 0xFFu];
     }
 
