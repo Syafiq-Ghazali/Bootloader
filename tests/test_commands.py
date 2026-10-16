@@ -5,7 +5,7 @@ Run: python tests/test_commands.py --cc path/to/gcc
 """
 import argparse
 import ctypes
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 import os
 from pathlib import Path
 import shutil
@@ -368,12 +368,9 @@ class Commands(unittest.TestCase):
         self.assertEqual(system[5], 13)
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--cc", default=os.environ.get("CC", "gcc"))
-    args = parser.parse_args()
-    compiler = shutil.which(args.cc)
-    if compiler is None: parser.error("GCC is required; pass --cc with its executable path")
+@contextmanager
+def firmware_library(compiler):
+    """Share the real firmware test harness with the Python client tests."""
     os.environ["PATH"] = str(Path(compiler).parent) + os.pathsep + os.environ.get("PATH", "")
     with tempfile.TemporaryDirectory(prefix="bootloader-commands-") as directory, ExitStack() as cleanup:
         build = Path(directory)
@@ -398,6 +395,16 @@ def main():
         lib.test_advance.argtypes = [ctypes.c_uint32]
         for name in ("test_crc", "test_saved_crc", "test_write_length"):
             getattr(lib, name).restype = ctypes.c_uint32
+        yield lib
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cc", default=os.environ.get("CC", "gcc"))
+    args = parser.parse_args()
+    compiler = shutil.which(args.cc)
+    if compiler is None: parser.error("GCC is required; pass --cc with its executable path")
+    with firmware_library(compiler) as lib:
         Commands.lib = lib
         result = unittest.TextTestRunner(verbosity=2).run(unittest.defaultTestLoader.loadTestsFromTestCase(Commands))
         if not result.wasSuccessful(): raise SystemExit(1)

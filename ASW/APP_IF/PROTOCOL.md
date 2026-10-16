@@ -189,8 +189,8 @@ while an update is in progress.
 
 ## Python example and update sequence
 
-The firmware does not include an adapter-specific Python client yet. A client
-can generate the wire messages using the standard library:
+The [Python PCAN client](../../host/README.md) implements this protocol with
+an API and command-line tool. The wire messages can also be constructed directly:
 
 ```python
 import struct

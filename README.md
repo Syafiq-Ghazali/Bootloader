@@ -7,3 +7,5 @@ It receives firmware updates over CAN, programs the application into flash, and 
 This project is a work in progress. More documentation will be added as development continues.
 
 See the [CAN command interface](ASW/APP_IF/PROTOCOL.md) for commands and the Python message format.
+
+The [Python PCAN client](host/README.md) provides command-line tools for flashing, reading, erasing, and verifying applications.

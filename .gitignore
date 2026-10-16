@@ -10,3 +10,11 @@ CPU1_RAM/
 
 # ignore .theia directory
 .theia/*
+
+# Python host client and test artifacts
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
