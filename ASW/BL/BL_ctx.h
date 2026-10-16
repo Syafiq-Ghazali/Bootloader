@@ -48,6 +48,14 @@ typedef struct CtxData_t
 
     // Cluster CRC retry counter
     Uint16_t clstrCrcRetryCount;
+    Bool_t clstrReady;
+    Bool_t clstrCommitted;
+    Uint16_t clstrWordsLoaded;
+    Uint16_t clstrTag;
+    Uint16_t lastDataOffset;
+    Uint16_t lastDataCount;
+    Uint16_t lastDataWords[BL_IF_SEQ_DATA_WORDS];
+    Uint32_t wordsWritten;
 } CtxData_t;
 
 /*=== ENUMERATIONS ===========================================================*/

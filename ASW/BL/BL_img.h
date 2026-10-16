@@ -60,6 +60,10 @@ extern Uint16_t BL_imgFixedMetadataErase    (void);
 
 extern Uint16_t BL_imgAppErase              (void);
 extern Uint32_t BL_imgCrcCompute            (void);
+extern Bool_t   BL_imgRangeValid            (Uint32_t address, Uint32_t wordCount);
+extern Uint16_t BL_imgRead                  (Uint32_t address, Uint16_t *data, Uint16_t wordCount);
+extern Uint16_t BL_imgRangeCrcCompute       (Uint32_t address, Uint32_t wordCount, Uint32_t *crc);
+extern Uint16_t BL_imgRangeErase            (Uint32_t address, Uint32_t wordCount);
 
 extern void     BL_imgAppStart              (void);
 

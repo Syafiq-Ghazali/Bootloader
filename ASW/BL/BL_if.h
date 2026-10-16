@@ -11,6 +11,9 @@
 #define BL_IF_CAN_ID_REPLY      (0x200uL)
 #define BL_IF_CAN_ID_REQUEST    (0x201uL)
 #define BL_IF_CAN_ID_DATA       (0x202uL)
+#define BL_IF_CAN_ID_SEQ_DATA   (0x203uL)
+#define BL_IF_PROTOCOL_VERSION  (2u)
+#define BL_IF_SEQ_DATA_WORDS    (2u)
 
 #define BL_IF_CAN_LEN           (8u)
 #define BL_IF_CAN_LEN_REPLY     (BL_IF_CAN_LEN)
@@ -24,6 +27,7 @@ typedef enum IfMessageType_t
     BL_IF_MESSAGE_DATA,
     BL_IF_MESSAGE_REPLY,
     BL_IF_MESSAGE_UNKNOWN,
+    BL_IF_MESSAGE_SEQUENCED_DATA,
 } IfMessageType_t;
 
 typedef enum IfMux_t
@@ -31,6 +35,12 @@ typedef enum IfMux_t
     BL_REPLY_MUX_REQSTATUS = 0,
     BL_REPLY_MUX_VERSION,
     BL_REPLY_MUX_SYSSTATUS,
+    BL_REPLY_MUX_CAPABILITIES,
+    BL_REPLY_MUX_STATE,
+    BL_REPLY_MUX_MEMORY_START,
+    BL_REPLY_MUX_MEMORY_SIZE,
+    BL_REPLY_MUX_READ_DATA,
+    BL_REPLY_MUX_CRC,
     BL_REPLY_NUM_MUX_VALUES,
 
     BL_REQUEST_MUX_APP_ERASE = 0,
@@ -42,6 +52,13 @@ typedef enum IfMux_t
     BL_REQUEST_MUX_RESET,
     BL_REQUEST_MUX_INFO,
     BL_REQUEST_MUX_DATA,
+    BL_REQUEST_MUX_STATUS,
+    BL_REQUEST_MUX_MEMORY_MAP,
+    BL_REQUEST_MUX_KEEP_ALIVE,
+    BL_REQUEST_MUX_READ,
+    BL_REQUEST_MUX_ERASE_RANGE,
+    BL_REQUEST_MUX_VERIFY,
+    BL_REQUEST_MUX_UPDATE_ABORT,
     BL_REQUEST_NUM_MUX_VALUES,
 } IfMux_t;
 
@@ -64,6 +81,12 @@ typedef enum IfErrorReason_t
     BL_ERROR_LOAD_CONFIGURE,
     BL_ERROR_APP_SIZE,
     BL_ERROR_APP_CRC,
+    BL_ERROR_ADDRESS,
+    BL_ERROR_ALIGNMENT,
+    BL_ERROR_STATE,
+    BL_ERROR_SEQUENCE,
+    BL_ERROR_LENGTH,
+    BL_ERROR_TX_TIMEOUT,
 } IfErrorReason_t;
 
 typedef struct IfReplyMessage_t
@@ -77,6 +100,15 @@ typedef struct IfReplyMessage_t
     Uint32_t imageCrc;
     IfErrorReason_t errorReason;
     Bool_t appValid;
+    Uint16_t tag;
+    Uint16_t offset;
+    Uint16_t words[BL_IF_SEQ_DATA_WORDS];
+    Uint16_t state;
+    Bool_t clusterReady;
+    Uint32_t wordsWritten;
+    Uint32_t address;
+    Uint32_t length;
+    Uint16_t hardwareSerialNumber;
 } IfReplyMessage_t;
 
 typedef struct IfRequestMessage_t
@@ -88,11 +120,17 @@ typedef struct IfRequestMessage_t
     Uint16_t clusterLength;
     Uint32_t clusterCrc;
     Uint32_t appCrc;
+    Uint32_t address;
+    Uint16_t length;
+    Uint16_t tag;
 } IfRequestMessage_t;
 
 typedef struct IfDataMessage_t
 {
     Uint16_t dataWords[BL_IF_DATA_LEN_WORDS];
+    Uint16_t offset;
+    Uint16_t tag;
+    Uint16_t wordCount;
 } IfDataMessage_t;
 
 typedef struct IfMessage_t
@@ -108,6 +146,7 @@ extern void     BL_ifInit              (void);
 extern Uint16_t BL_ifTx                (const IfMessage_t *msg);
 extern Uint16_t BL_ifRx                (IfMessage_t *msg);
 extern Bool_t   BL_ifTxPending         (void);
+extern Uint16_t BL_ifReplyTx           (const IfReplyMessage_t *reply);
 extern Uint16_t BL_ifReplyReqStatusTx  (IfRequestStatus_t requestStatus,
                                         IfMux_t requestMux);
 extern Uint16_t BL_ifReplyVersionTx    (Uint16_t bootloaderVersion,

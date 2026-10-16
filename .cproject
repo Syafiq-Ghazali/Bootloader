@@ -60,6 +60,7 @@
                                     <listOptionValue value="${CG_TOOL_ROOT}/include"/>
                                     <listOptionValue value="${PROJECT_ROOT}/ASW/MAIN"/>
                                     <listOptionValue value="${PROJECT_ROOT}/ASW/BL"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/ASW/APP_IF"/>
                                     <listOptionValue value="${PROJECT_ROOT}/BSW/BCAN"/>
                                     <listOptionValue value="${PROJECT_ROOT}/BSW/BCRC"/>
                                     <listOptionValue value="${PROJECT_ROOT}/BSW/BFLASH"/>
@@ -172,7 +173,8 @@
                                 <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.VCU_SUPPORT.230988316" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.VCU_SUPPORT" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.VCU_SUPPORT.vcrc" valueType="enumerated"/>
                                 <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.TMU_SUPPORT.1891282910" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.TMU_SUPPORT" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.TMU_SUPPORT.tmu0" valueType="enumerated"/>
                                 <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.GEN_FUNC_SUBSECTIONS.618898535" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.GEN_FUNC_SUBSECTIONS" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.GEN_FUNC_SUBSECTIONS.on" valueType="enumerated"/>
-                                <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL.1775613967" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL.off" valueType="enumerated"/>
+                                <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL.1775613967" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL.2" valueType="enumerated"/>
+                                <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_FOR_SPEED.1775613967" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_FOR_SPEED" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_FOR_SPEED.0" valueType="enumerated"/>
                                 <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.INCLUDE_PATH.857890990" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.INCLUDE_PATH" valueType="includePath">
                                     <listOptionValue value="${SYSCONFIG_TOOL_INCLUDE_PATH}"/>
                                     <listOptionValue value="${COM_TI_C2000WARE_INCLUDE_PATH}"/>
@@ -188,6 +190,7 @@
                                     <listOptionValue value="${PROJECT_ROOT}/ASW"/>
                                     <listOptionValue value="${PROJECT_ROOT}/BSW/BCRC"/>
                                     <listOptionValue value="${PROJECT_ROOT}/ASW/BL"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/ASW/APP_IF"/>
                                     <listOptionValue value="${PROJECT_ROOT}/ASW/MAIN"/>
                                     <listOptionValue value="${PROJECT_ROOT}/BRD"/>
                                     <listOptionValue value="C:\ti\c2000\C2000Ware_6_00_00_00\libraries\flash_api\f28003x"/>
@@ -324,6 +327,7 @@
                                     <listOptionValue value="${CG_TOOL_ROOT}/include"/>
                                     <listOptionValue value="${PROJECT_ROOT}/ASW/MAIN"/>
                                     <listOptionValue value="${PROJECT_ROOT}/ASW/BL"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/ASW/APP_IF"/>
                                     <listOptionValue value="${PROJECT_ROOT}/BSW/BCAN"/>
                                     <listOptionValue value="${PROJECT_ROOT}/BSW/BCRC"/>
                                     <listOptionValue value="${PROJECT_ROOT}/BSW/BFLASH"/>
@@ -454,6 +458,7 @@
                                     <listOptionValue value="${PROJECT_ROOT}/BSW/TMR"/>
                                     <listOptionValue value="${PROJECT_ROOT}/ASW"/>
                                     <listOptionValue value="${PROJECT_ROOT}/ASW/BL"/>
+                                    <listOptionValue value="${PROJECT_ROOT}/ASW/APP_IF"/>
                                     <listOptionValue value="${PROJECT_ROOT}/ASW/MAIN"/>
                                     <listOptionValue value="${PROJECT_ROOT}/BRD"/>
                                 </option>
@@ -465,7 +470,8 @@
                                     <listOptionValue value="_FLASH"/>
                                     <listOptionValue value="_LAUNCHXL_F280039C"/>
                                 </option>
-                                <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL.146112577" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL.off" valueType="enumerated"/>
+                                <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL.146112577" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_LEVEL.2" valueType="enumerated"/>
+                                <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_FOR_SPEED.146112577" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_FOR_SPEED" value="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.OPT_FOR_SPEED.0" valueType="enumerated"/>
                                 <option id="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.DIAG_SUPPRESS.195084043" superClass="com.ti.ccstudio.buildDefinitions.C2000_22.6.compilerID.DIAG_SUPPRESS" valueType="stringList">
                                     <listOptionValue value="10063"/>
                                 </option>

@@ -5,6 +5,8 @@
 #include <string.h>
 #include "BL_if.h"
 #include "BRD_CAN.h"
+#include "TMR.h"
+#include "BL_sm.h"
 
 static Uint16_t F_canEncode     (CanMsg_t *frame, const IfMessage_t *msg);
 static Uint16_t F_canDecode     (IfMessage_t *msg, const CanMsg_t *frame);
@@ -32,14 +34,23 @@ Uint16_t BL_ifTx
 )
 {
     CanMsg_t frame = {0};
+    TmrHandle_t timeout;
 
-    if ((F_canEncode(&frame, msg) != OK) ||
-        (BCAN_tx(F_canHandle, &frame) != CAN_STATUS_TX_OK))
+    if ((F_canHandle == NULL) || (F_canEncode(&frame, msg) != OK))
     {
         return FAIL;
     }
 
-    return OK;
+    // Serialize replies: CAN mailboxes with the same ID may otherwise reorder.
+    TMR_createAndStart(&timeout, BL_CAN_TX_PENDING_TIMEOUT_MS);
+    while (BCAN_txPending(F_canHandle) == TRUE)
+    {
+        if (TMR_updateAndCheckExpiry(&timeout) == TRUE)
+        {
+            return FAIL;
+        }
+    }
+    return (BCAN_tx(F_canHandle, &frame) == CAN_STATUS_TX_OK) ? OK : FAIL;
 }
 
 Uint16_t BL_ifRx
@@ -71,6 +82,20 @@ Bool_t BL_ifTxPending
 )
 {
     return BCAN_txPending(F_canHandle);
+}
+
+Uint16_t BL_ifReplyTx(const IfReplyMessage_t *reply)
+{
+    IfMessage_t msg;
+    memset(&msg, 0, sizeof(msg));
+    if (reply == NULL)
+    {
+        return FAIL;
+    }
+    msg.type = BL_IF_MESSAGE_REPLY;
+    msg.reply = *reply;
+    msg.lenBytes = BL_IF_CAN_LEN_REPLY;
+    return BL_ifTx(&msg);
 }
 
 Uint16_t BL_ifReplyReqStatusTx
@@ -162,6 +187,8 @@ static Uint16_t F_canEncode
                 {
                     F_writeU8(frame, 0u, (Uint16_t)msg->reply.requestStatus);
                     F_writeU8(frame, 1u, (Uint16_t)msg->reply.requestMux);
+                    F_writeU8(frame, 2u, (Uint16_t)msg->reply.errorReason);
+                    F_writeU16(frame, 4u, msg->reply.offset);
                     break;
                 }
                 case BL_REPLY_MUX_VERSION:
@@ -178,12 +205,39 @@ static Uint16_t F_canEncode
                     F_writeU8(frame, 5u, (Uint16_t)msg->reply.errorReason);
                     break;
                 }
+                case BL_REPLY_MUX_CAPABILITIES:
+                    F_writeU16(frame, 0u, BL_IF_PROTOCOL_VERSION);
+                    F_writeU16(frame, 2u, msg->reply.hardwareSerialNumber);
+                    F_writeU16(frame, 4u, BL_IF_SEQ_DATA_WORDS);
+                    break;
+                case BL_REPLY_MUX_STATE:
+                    F_writeU8(frame, 0u, msg->reply.state);
+                    F_writeU8(frame, 1u, (Uint16_t)msg->reply.clusterReady);
+                    F_writeU32(frame, 2u, msg->reply.wordsWritten);
+                    break;
+                case BL_REPLY_MUX_MEMORY_START:
+                    F_writeU32(frame, 0u, msg->reply.address);
+                    F_writeU16(frame, 4u, msg->reply.offset);
+                    break;
+                case BL_REPLY_MUX_MEMORY_SIZE:
+                    F_writeU32(frame, 0u, msg->reply.length);
+                    F_writeU16(frame, 4u, msg->reply.offset);
+                    break;
+                case BL_REPLY_MUX_READ_DATA:
+                    F_writeU16(frame, 0u, msg->reply.offset);
+                    F_writeU16(frame, 2u, msg->reply.words[0]);
+                    F_writeU16(frame, 4u, msg->reply.words[1]);
+                    break;
+                case BL_REPLY_MUX_CRC:
+                    F_writeU32(frame, 0u, msg->reply.imageCrc);
+                    break;
                 default:
                 {
                     return FAIL;
                 }
             }
 
+            F_writeU8(frame, 6u, msg->reply.tag);
             F_writeU8(frame, 7u, (Uint16_t)msg->reply.mux);
             break;
         }
@@ -221,15 +275,26 @@ static Uint16_t F_canEncode
                 case BL_REQUEST_MUX_APP_RUN:
                 case BL_REQUEST_MUX_RESET:
                 case BL_REQUEST_MUX_INFO:
+                case BL_REQUEST_MUX_STATUS:
+                case BL_REQUEST_MUX_MEMORY_MAP:
+                case BL_REQUEST_MUX_KEEP_ALIVE:
+                case BL_REQUEST_MUX_UPDATE_ABORT:
                 {
                     break;
                 }
+                case BL_REQUEST_MUX_READ:
+                case BL_REQUEST_MUX_ERASE_RANGE:
+                case BL_REQUEST_MUX_VERIFY:
+                    F_writeU32(frame, 0u, msg->request.address);
+                    F_writeU16(frame, 4u, msg->request.length);
+                    break;
                 default:
                 {
                     return FAIL;
                 }
             }
 
+            F_writeU8(frame, 6u, msg->request.tag);
             F_writeU8(frame, 7u, (Uint16_t)msg->request.mux);
             break;
         }
@@ -247,6 +312,17 @@ static Uint16_t F_canEncode
 
             break;
         }
+        case BL_IF_MESSAGE_SEQUENCED_DATA:
+            if ((msg->data.wordCount == 0u) || (msg->data.wordCount > BL_IF_SEQ_DATA_WORDS))
+                return FAIL;
+            frame->id = BL_IF_CAN_ID_SEQ_DATA;
+            frame->bufLen = BL_IF_CAN_LEN;
+            F_writeU16(frame, 0u, msg->data.offset);
+            F_writeU16(frame, 2u, msg->data.dataWords[0]);
+            F_writeU16(frame, 4u, msg->data.dataWords[1]);
+            F_writeU8(frame, 6u, msg->data.tag);
+            F_writeU8(frame, 7u, msg->data.wordCount);
+            break;
 
         default:
         {
@@ -266,7 +342,7 @@ static Uint16_t F_canDecode
     Uint16_t i;
     Uint16_t lenWords;
 
-    if ((msg == NULL) || (frame == NULL))
+    if ((msg == NULL) || (frame == NULL) || (frame->bufLen > BL_IF_CAN_LEN))
     {
         return FAIL;
     }
@@ -278,8 +354,10 @@ static Uint16_t F_canDecode
     {
         case BL_IF_CAN_ID_REQUEST:
         {
+            if (frame->bufLen != BL_IF_CAN_LEN_REQUEST) return FAIL;
             msg->type = BL_IF_MESSAGE_REQUEST;
             msg->request.mux = (IfMux_t)F_readU8(frame, 7u);
+            msg->request.tag = F_readU8(frame, 6u);
 
             switch (msg->request.mux)
             {
@@ -309,12 +387,23 @@ static Uint16_t F_canDecode
                 case BL_REQUEST_MUX_APP_RUN:
                 case BL_REQUEST_MUX_RESET:
                 case BL_REQUEST_MUX_INFO:
+                case BL_REQUEST_MUX_STATUS:
+                case BL_REQUEST_MUX_MEMORY_MAP:
+                case BL_REQUEST_MUX_KEEP_ALIVE:
+                case BL_REQUEST_MUX_UPDATE_ABORT:
                 {
                     break;
                 }
+                case BL_REQUEST_MUX_READ:
+                case BL_REQUEST_MUX_ERASE_RANGE:
+                case BL_REQUEST_MUX_VERIFY:
+                    msg->request.address = F_readU32(frame, 0u);
+                    msg->request.length = F_readU16(frame, 4u);
+                    break;
                 default:
                 {
-                    return FAIL;
+                    // Deliver unknown commands so the application can reply INVALID.
+                    break;
                 }
             }
 
@@ -323,8 +412,10 @@ static Uint16_t F_canDecode
 
         case BL_IF_CAN_ID_REPLY:
         {
+            if (frame->bufLen != BL_IF_CAN_LEN_REPLY) return FAIL;
             msg->type = BL_IF_MESSAGE_REPLY;
             msg->reply.mux = (IfMux_t)F_readU8(frame, 7u);
+            msg->reply.tag = F_readU8(frame, 6u);
 
             switch (msg->reply.mux)
             {
@@ -332,6 +423,8 @@ static Uint16_t F_canDecode
                 {
                     msg->reply.requestStatus = (IfRequestStatus_t)F_readU8(frame, 0u);
                     msg->reply.requestMux = (IfMux_t)F_readU8(frame, 1u);
+                    msg->reply.errorReason = (IfErrorReason_t)F_readU8(frame, 2u);
+                    msg->reply.offset = F_readU16(frame, 4u);
                     break;
                 }
                 case BL_REPLY_MUX_VERSION:
@@ -348,6 +441,30 @@ static Uint16_t F_canDecode
                     msg->reply.errorReason = (IfErrorReason_t)F_readU8(frame, 5u);
                     break;
                 }
+                case BL_REPLY_MUX_CAPABILITIES:
+                    msg->reply.hardwareSerialNumber = F_readU16(frame, 2u);
+                    break;
+                case BL_REPLY_MUX_STATE:
+                    msg->reply.state = F_readU8(frame, 0u);
+                    msg->reply.clusterReady = (Bool_t)F_readU8(frame, 1u);
+                    msg->reply.wordsWritten = F_readU32(frame, 2u);
+                    break;
+                case BL_REPLY_MUX_MEMORY_START:
+                    msg->reply.address = F_readU32(frame, 0u);
+                    msg->reply.offset = F_readU16(frame, 4u);
+                    break;
+                case BL_REPLY_MUX_MEMORY_SIZE:
+                    msg->reply.length = F_readU32(frame, 0u);
+                    msg->reply.offset = F_readU16(frame, 4u);
+                    break;
+                case BL_REPLY_MUX_READ_DATA:
+                    msg->reply.offset = F_readU16(frame, 0u);
+                    msg->reply.words[0] = F_readU16(frame, 2u);
+                    msg->reply.words[1] = F_readU16(frame, 4u);
+                    break;
+                case BL_REPLY_MUX_CRC:
+                    msg->reply.imageCrc = F_readU32(frame, 0u);
+                    break;
                 default:
                 {
                     return FAIL;
@@ -359,6 +476,7 @@ static Uint16_t F_canDecode
 
         case BL_IF_CAN_ID_DATA:
         {
+            if ((frame->bufLen == 0u) || ((frame->bufLen & 1u) != 0u)) return FAIL;
             msg->type = BL_IF_MESSAGE_DATA;
             lenWords = (msg->lenBytes + 1u) / 2u;
 
@@ -369,6 +487,16 @@ static Uint16_t F_canDecode
 
             break;
         }
+        case BL_IF_CAN_ID_SEQ_DATA:
+            if (frame->bufLen != BL_IF_CAN_LEN) return FAIL;
+            msg->type = BL_IF_MESSAGE_SEQUENCED_DATA;
+            msg->data.offset = F_readU16(frame, 0u);
+            msg->data.dataWords[0] = F_readU16(frame, 2u);
+            msg->data.dataWords[1] = F_readU16(frame, 4u);
+            msg->data.tag = F_readU8(frame, 6u);
+            msg->data.wordCount = F_readU8(frame, 7u);
+            // Bad counts reach the command handler for an explicit error reply.
+            break;
 
         default:
         {

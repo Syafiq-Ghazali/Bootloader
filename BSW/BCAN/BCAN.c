@@ -126,10 +126,9 @@ CanStatus_t BCAN_tx
                            CAN_DEFAULT_ID_MASK,
                            CAN_MSG_OBJ_TX_INT_ENABLE,
                            canMsg->bufLen);
-    CAN_sendMessage(handle->base, objId, canMsg->bufLen, canMsg->buf);
-
     F_txMsgBusyFlags[objId - 1u] = TRUE;
     F_txCanHwBuf--;
+    CAN_sendMessage(handle->base, objId, canMsg->bufLen, canMsg->buf);
 
     return CAN_STATUS_TX_OK;
 }

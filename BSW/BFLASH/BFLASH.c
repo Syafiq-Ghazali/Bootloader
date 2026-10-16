@@ -9,7 +9,6 @@
 
 static Bool_t F_bufferEmptyCheck            (const Uint16_t *buffer, Uint16_t size);
 static void   F_flashError                  (Fapi_StatusType status);
-static void   F_fmstatFail                  (void);
 static void   F_prefetchSwWorkaroundDisable (Uint32_t ctrlBase);
 static void   F_prefetchSwWorkaroundEnable  (Uint32_t ctrlBase);
 
@@ -38,16 +37,6 @@ RAMFUNC static void F_flashError
 )
 {
     (void)status;
-    while (1)
-    {
-    }
-}
-
-RAMFUNC static void F_fmstatFail
-(
-    void
-)
-{
     while (1)
     {
     }
@@ -97,7 +86,7 @@ RAMFUNC void BFLASH_initialize
     F_prefetchSwWorkaroundEnable(FLASH0CTRL_BASE);
 }
 
-RAMFUNC Uint16_t BFLASH_sectorErase
+RAMFUNC static Uint16_t F_sectorErase
 (
     BflashSector_t sector
 )
@@ -121,7 +110,6 @@ RAMFUNC Uint16_t BFLASH_sectorErase
 
     if (retStatus != Fapi_Status_Success)
     {
-        F_flashError(retStatus);
         return FAIL;
     }
 
@@ -133,14 +121,12 @@ RAMFUNC Uint16_t BFLASH_sectorErase
 
     if (retStatus != Fapi_Status_Success)
     {
-        F_flashError(retStatus);
         return FAIL;
     }
 
     flashStatus = Fapi_getFsmStatus();
     if (flashStatus != 0u)
     {
-        F_fmstatFail();
         return FAIL;
     }
 
@@ -149,14 +135,13 @@ RAMFUNC Uint16_t BFLASH_sectorErase
                                   &flashStatusWord);
     if (retStatus != Fapi_Status_Success)
     {
-        F_flashError(retStatus);
         return FAIL;
     }
 
     return OK;
 }
 
-RAMFUNC Uint16_t BFLASH_bufferWrite
+RAMFUNC static Uint16_t F_bufferWrite
 (
     Uint32_t flashAddr,
     Uint16_t *buffer,
@@ -170,7 +155,10 @@ RAMFUNC Uint16_t BFLASH_bufferWrite
     Uint32_t flashProgramStartAddress;
     Uint32_t i;
 
-    if ((((Uint32_t)buffer & 0x7uL) != 0uL) ||
+    if ((buffer == NULL) || (bufferLen == 0uL) ||
+        (flashAddr < BFLASH_START) || (flashAddr > BFLASH_END) ||
+        (bufferLen > BFLASH_END - flashAddr + 1uL) ||
+        (((Uint32_t)buffer & 0x7uL) != 0uL) ||
         ((flashAddr & 0x7uL) != 0uL) ||
         ((bufferLen & 0x7uL) != 0uL))
     {
@@ -195,7 +183,6 @@ RAMFUNC Uint16_t BFLASH_bufferWrite
 
             if (retStatus != Fapi_Status_Success)
             {
-                F_flashError(retStatus);
                 return FAIL;
             }
 
@@ -211,11 +198,27 @@ RAMFUNC Uint16_t BFLASH_bufferWrite
                                       &flashStatusWord);
             if (retStatus != Fapi_Status_Success)
             {
-                F_flashError(retStatus);
                 return FAIL;
             }
         }
     }
 
     return OK;
+}
+
+/* ISRs execute from flash, so mask them while the flash FSM is busy. */
+RAMFUNC Uint16_t BFLASH_sectorErase(BflashSector_t sector)
+{
+    Uint16_t interruptState = __disable_interrupts();
+    Uint16_t result = F_sectorErase(sector);
+    if ((interruptState & 1u) == 0u) __enable_interrupts();
+    return result;
+}
+
+RAMFUNC Uint16_t BFLASH_bufferWrite(Uint32_t flashAddr, Uint16_t *buffer, Uint32_t bufferLen)
+{
+    Uint16_t interruptState = __disable_interrupts();
+    Uint16_t result = F_bufferWrite(flashAddr, buffer, bufferLen);
+    if ((interruptState & 1u) == 0u) __enable_interrupts();
+    return result;
 }

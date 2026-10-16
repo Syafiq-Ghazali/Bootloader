@@ -27,7 +27,8 @@ MEMORY
    RESET            : origin = 0x003FFFC0, length = 0x00000002
 
    /* Flash sectors */
-   FLASH            : origin = 0x080000 + 2, length = 0x2DFFF - 2
+   /* Bootloader sectors 0-2 only; sectors 3-4 hold metadata, app starts at 0x85000. */
+   FLASH            : origin = 0x080000 + 2, length = 0x3000 - 2
    // FLASH_BANK0_SEC15_RSVD     : origin = 0x0AFFF0, length = 0x000010  /* Reserve and do not use for code as per the errata advisory "Memory: Prefetching Beyond Valid Memory" */
 
    CLA1_MSGRAMLOW  	: origin = 0x001480, length = 0x000080
@@ -48,6 +49,7 @@ SECTIONS
 
    .init_array      : > FLASH,  ALIGN(8)
    .bss             : >> RAMLS7 | RAMGS0123
+   LNK_blockBufferSection : > RAMGS0123, ALIGN(8)
    .bss:output		: > RAMLS6
    .bss:cio         : > RAMLS01
    .data			: > RAMLS7 | RAMGS0123

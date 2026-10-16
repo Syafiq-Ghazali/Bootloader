@@ -478,8 +478,12 @@ Interrupt_disable(uint32_t interruptNumber);
 // Extern compiler intrinsic prototypes. See compiler User's Guide for details.
 //
 //*****************************************************************************
+// TI provides these as built-ins; redeclaring them with a different integer
+// typedef can hide the intrinsic and produce an unresolved external call.
+#if !defined(__TI_COMPILER_VERSION__)
 extern uint16_t __disable_interrupts(void);
 extern uint16_t __enable_interrupts(void);
+#endif
 
 //*****************************************************************************
 //

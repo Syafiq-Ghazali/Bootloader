@@ -23,6 +23,48 @@
 
 /*=== PRIVATE DATA ===========================================================*/
 
+#pragma DATA_ALIGN(F_metadataBuffer, 8);
+static Uint16_t F_metadataBuffer[16];
+
+Bool_t BL_imgRangeValid(Uint32_t address, Uint32_t wordCount)
+{
+    // Subtraction avoids overflow from an untrusted address + length.
+    return (wordCount != 0uL) &&
+           (address >= BL_IMG_APPLICATION_BEGIN_ADDR) && (address <= BFLASH_END) &&
+           (wordCount <= (BFLASH_END - address + 1uL));
+}
+
+Uint16_t BL_imgRead(Uint32_t address, Uint16_t *data, Uint16_t wordCount)
+{
+    Uint16_t i;
+    const volatile Uint16_t *flash = (const volatile Uint16_t *)address;
+    if ((data == NULL) || !BL_imgRangeValid(address, wordCount)) return FAIL;
+    for (i = 0u; i < wordCount; i++) data[i] = flash[i];
+    return OK;
+}
+
+Uint16_t BL_imgRangeCrcCompute(Uint32_t address, Uint32_t wordCount, Uint32_t *crc)
+{
+    if ((crc == NULL) || !BL_imgRangeValid(address, wordCount)) return FAIL;
+    *crc = BCRC_compute((const Uint16_t *)address, wordCount, BL_IMG_INITIAL_CRC);
+    return OK;
+}
+
+RAMFUNC Uint16_t BL_imgRangeErase(Uint32_t address, Uint32_t wordCount)
+{
+    Uint32_t offset;
+    if (!BL_imgRangeValid(address, wordCount) ||
+        ((address % BFLASH_SECTOR_SIZE_WORDS) != 0uL) ||
+        ((wordCount % BFLASH_SECTOR_SIZE_WORDS) != 0uL)) return FAIL;
+    for (offset = 0uL; offset < wordCount; offset += BFLASH_SECTOR_SIZE_WORDS)
+    {
+        BflashSector_t sector = (BflashSector_t)((address + offset - BFLASH_START) /
+                                                BFLASH_SECTOR_SIZE_WORDS);
+        if (BFLASH_sectorErase(sector) != OK) return FAIL;
+    }
+    return OK;
+}
+
 /*
 |===============================================================================
 |
@@ -177,14 +219,13 @@ RAMFUNC Uint16_t BL_imgVariableMetadataWrite
     Uint32_t variableMetadataAddress = BFLASH_sectorAddressGet(BL_IMG_VARIABLE_METADATA_SECTOR);
 
     // Round up the size to write to the next multiple of 8 (required by BFLASH API)
-    Uint32_t bufferLen = ((sizeof(ImgVariableMetadata_t) + 7) / 8) * 8;
-    Uint16_t *buffer = (Uint16_t *)(variableMetadata);
-    
-    // Note: Up to 7 words of additional memory will be written to flash. This is
-    // fine, as this sector is completely dedicated to the variable metadata
+    Uint32_t bufferLen = ((sizeof(*variableMetadata) / sizeof(Uint16_t) + 7u) / 8u) * 8u;
+    if ((variableMetadata == NULL) || (bufferLen > 16u)) return FAIL;
+    memset(F_metadataBuffer, 0xFFFF, sizeof(F_metadataBuffer));
+    memcpy(F_metadataBuffer, variableMetadata, sizeof(*variableMetadata));
 
     // Write the buffer to flash memory
-    return BFLASH_bufferWrite(variableMetadataAddress, buffer, bufferLen);
+    return BFLASH_bufferWrite(variableMetadataAddress, F_metadataBuffer, bufferLen);
 }
 
 
@@ -220,14 +261,13 @@ RAMFUNC Uint16_t BL_imgFixedMetadataWrite
     Uint32_t fixedMetadataAddress = BFLASH_sectorAddressGet(BL_IMG_FIXED_METADATA_SECTOR);
 
     // Round up the size to write to the next multiple of 8 (required by BFLASH API)
-    Uint32_t bufferLen = ((sizeof(ImgFixedMetadata_t) + 7) / 8) * 8;
-    Uint16_t *buffer = (Uint16_t *)(fixedMetadata);
- 
-    // Note: Up to 7 words of additional memory will be written to flash. This is
-    // fine, as this sector is completely dedicated to the fixed metadata
+    Uint32_t bufferLen = ((sizeof(*fixedMetadata) / sizeof(Uint16_t) + 7u) / 8u) * 8u;
+    if ((fixedMetadata == NULL) || (bufferLen > 16u)) return FAIL;
+    memset(F_metadataBuffer, 0xFFFF, sizeof(F_metadataBuffer));
+    memcpy(F_metadataBuffer, fixedMetadata, sizeof(*fixedMetadata));
 
     // Write the buffer to flash memory
-    return BFLASH_bufferWrite(fixedMetadataAddress, buffer, bufferLen);
+    return BFLASH_bufferWrite(fixedMetadataAddress, F_metadataBuffer, bufferLen);
 }
 
 /*
